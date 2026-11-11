@@ -4,6 +4,7 @@ import { getData, Poller, describeError } from '../data/fetcher';
 import { settings } from '../core/store';
 import { icon, fmtLL, ago } from '../core/fmt';
 import { pid, type LayerFactory, type Dossier } from './Layer';
+import { TrailStore } from '../spy/trails';
 
 interface Ship {
   mmsi: number;
@@ -25,6 +26,7 @@ const factory: LayerFactory = (ctx) => {
   let coll: BillboardCollection | undefined;
   const bbs = new Map<number, Billboard>();
   const ships = new Map<number, Ship>();
+  const trails = new TrailStore(60, 4000, 0.03);
   let poller: Poller | undefined;
   let ws: WebSocket | undefined;
   let wsCount = 0;
@@ -34,6 +36,7 @@ const factory: LayerFactory = (ctx) => {
   const upsert = (s: Ship) => {
     if (!coll || !Number.isFinite(s.lat) || !Number.isFinite(s.lon)) return;
     const prev = ships.get(s.mmsi);
+    trails.push(String(s.mmsi), s.lat, s.lon, 0, s.t);
     ships.set(s.mmsi, { ...prev, ...s, name: s.name ?? prev?.name });
     let b = bbs.get(s.mmsi);
     const pos = Cartesian3.fromDegrees(s.lon, s.lat, 0);
@@ -58,6 +61,7 @@ const factory: LayerFactory = (ctx) => {
         coll?.remove(bbs.get(k)!);
         bbs.delete(k);
         ships.delete(k);
+        trails.delete(String(k));
       }
       ctx.status('live', `Digitraffic Baltic${ws ? ` + aisstream (${wsCount})` : settings.keys.aisstream ? '' : ' · add aisstream key for global'}`, ships.size);
       ctx.requestRender();
@@ -124,6 +128,7 @@ const factory: LayerFactory = (ctx) => {
       coll = undefined;
       bbs.clear();
       ships.clear();
+      trails.clear();
     },
     locate(key) {
       const s = ships.get(Number(key));
@@ -168,6 +173,10 @@ const factory: LayerFactory = (ctx) => {
           return Cartesian3.fromDegrees(c.lon, c.lat, 0);
         },
         range: 20000,
+        trail: () => {
+          const c = ships.get(s.mmsi) ?? s;
+          return trails.positions(String(s.mmsi), { lat: c.lat, lon: c.lon, alt: 0 });
+        },
         actions: [{ label: 'MARINETRAFFIC ↗', run: () => window.open(`https://www.marinetraffic.com/en/ais/details/ships/mmsi:${s.mmsi}`, '_blank', 'noopener') }],
       };
       return d;

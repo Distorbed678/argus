@@ -5,6 +5,7 @@ import { getData, describeError, Poller } from '../data/fetcher';
 import { cameraInfo, viewCenter } from '../core/viewer';
 import { icon, fmtLL, ago } from '../core/fmt';
 import { bus } from '../core/bus';
+import { TrailStore } from '../spy/trails';
 import { pid, type Dossier, type Fix, type LayerFactory } from './Layer';
 
 export interface Ac {
@@ -87,7 +88,7 @@ export function deadReckon(a: Ac, t: number) {
   return { lat, lon };
 }
 
-export function acDossier(layer: string, a: Ac, get: () => Ac | undefined): Dossier {
+export function acDossier(layer: string, a: Ac, get: () => Ac | undefined, trails?: TrailStore): Dossier {
   const pos = () => {
     const cur = get() ?? a;
     const p = deadReckon(cur, Date.now());
@@ -121,6 +122,13 @@ export function acDossier(layer: string, a: Ac, get: () => Ac | undefined): Doss
       ];
     },
     position: pos,
+    trail: trails
+      ? () => {
+          const c = get() ?? a;
+          const p = deadReckon(c, Date.now());
+          return trails.positions(a.hex, { lat: p.lat, lon: p.lon, alt: c.alt === 'ground' ? 0 : c.alt * 0.3048 });
+        }
+      : undefined,
     range: 60000,
     actions: [{ label: 'ADSBX ↗', run: () => window.open(`https://globe.adsbexchange.com/?icao=${a.hex}`, '_blank', 'noopener') }],
   };
@@ -131,6 +139,7 @@ export function acRenderer(ctx: Parameters<LayerFactory>[0]) {
   let coll: BillboardCollection | undefined;
   const bbs = new Map<string, Billboard>();
   const acs = new Map<string, Ac>();
+  const trails = new TrailStore(60, 5000);
   const scale = new NearFarScalar(5e4, 1.3, 1.2e7, 0.45);
   let off: (() => void) | undefined;
   let lastDR = 0;
@@ -142,6 +151,7 @@ export function acRenderer(ctx: Parameters<LayerFactory>[0]) {
 
   return {
     acs,
+    trails,
     start() {
       coll = ctx.viewer.scene.primitives.add(new BillboardCollection());
       off = ctx.viewer.scene.preUpdate.addEventListener(() => {
@@ -160,6 +170,7 @@ export function acRenderer(ctx: Parameters<LayerFactory>[0]) {
       coll = undefined;
       bbs.clear();
       acs.clear();
+      trails.clear();
       bus.emit('feed', { layer: ctx.id, items: [] });
     },
     update(list: Ac[], replace: boolean, onNew?: (a: Ac) => void) {
@@ -168,6 +179,7 @@ export function acRenderer(ctx: Parameters<LayerFactory>[0]) {
       const t = Date.now();
       for (const a of list) {
         seen.add(a.hex);
+        trails.push(a.hex, a.lat, a.lon, a.alt === 'ground' ? 0 : a.alt * 0.3048, a.seen);
         const prev = acs.get(a.hex);
         acs.set(a.hex, a);
         let b = bbs.get(a.hex);
@@ -186,6 +198,7 @@ export function acRenderer(ctx: Parameters<LayerFactory>[0]) {
           coll.remove(b);
           bbs.delete(k);
           acs.delete(k);
+          trails.delete(k);
         }
       }
       ctx.requestRender();
@@ -300,12 +313,12 @@ const factory: LayerFactory = (ctx) => {
     },
     pick(key) {
       const a = r.acs.get(key);
-      return a ? acDossier(ctx.id, a, () => r.acs.get(key)) : undefined;
+      return a ? acDossier(ctx.id, a, () => r.acs.get(key), r.trails) : undefined;
     },
     locate: (k) => r.locate(k),
     find(q) {
       const s = q.trim().toUpperCase();
-      for (const a of r.acs.values()) if (a.flight?.toUpperCase() === s || a.hex.toUpperCase() === s || a.r?.toUpperCase() === s) return acDossier(ctx.id, a, () => r.acs.get(a.hex));
+      for (const a of r.acs.values()) if (a.flight?.toUpperCase() === s || a.hex.toUpperCase() === s || a.r?.toUpperCase() === s) return acDossier(ctx.id, a, () => r.acs.get(a.hex), r.trails);
       return;
     },
   };

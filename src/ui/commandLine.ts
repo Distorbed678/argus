@@ -29,6 +29,7 @@ const HELP: [string, string][] = [
   ['aoi draw [circle|poly]', 'draw a watch area on the globe'],
   ['aoi list | aoi del <name> | aoi fly <name>', 'manage watch areas'],
   ['revisit [lat,lon | aoi] [minEl]', 'earth-obs + military satellite passes over a point, next 24 h'],
+  ['measure', 'great-circle distance / bearing / area tool (Esc clears)'],
   ['pin | unpin', 'add / remove the selected target to the watchlist'],
   ['intel [aoi|watch]', 'open the intel panel'],
   ['layer <name> on|off', 'toggle a feed (layer flights on, layer quakes off)'],
@@ -272,6 +273,12 @@ export async function run(line: string, print: (h: string) => void): Promise<boo
       print(`<span class="h"><b>${s.passes}</b> passes by <b>${s.sats}</b> satellites${s.geo ? ` + ${s.geo} GEO` : ''} · median gap ${Number.isFinite(s.median) ? (s.median * 60).toFixed(0) + ' min' : '—'}. first 25:</span>`);
       for (const l of R.revisitLines(res.rows)) print(esc(l));
       return false;
+    }
+    case 'measure':
+    case 'ruler': {
+      const { startMeasure } = await import('../spy/measure');
+      startMeasure();
+      return true;
     }
     case 'pin':
     case 'unpin': {

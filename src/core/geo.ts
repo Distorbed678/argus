@@ -175,3 +175,29 @@ export function fmtKm(km: number): string {
   if (km >= 1) return `${km.toFixed(2)} km`;
   return `${Math.round(km * 1000)} m`;
 }
+
+/** Point a fraction f of the way along the great circle from a to b. */
+export function interpolateGC(a: LatLon, b: LatLon, f: number): LatLon {
+  const [p1, l1, p2, l2] = [a[0] * D2R, a[1] * D2R, b[0] * D2R, b[1] * D2R];
+  const d = distKm(a[0], a[1], b[0], b[1]) / R_KM;
+  if (d < 1e-9) return [a[0], a[1]];
+  const A = Math.sin((1 - f) * d) / Math.sin(d);
+  const B = Math.sin(f * d) / Math.sin(d);
+  const x = A * Math.cos(p1) * Math.cos(l1) + B * Math.cos(p2) * Math.cos(l2);
+  const y = A * Math.cos(p1) * Math.sin(l1) + B * Math.cos(p2) * Math.sin(l2);
+  const z = A * Math.sin(p1) + B * Math.sin(p2);
+  return [Math.atan2(z, Math.hypot(x, y)) * R2D, Math.atan2(y, x) * R2D];
+}
+
+/** Insert great-circle points so no segment is longer than stepKm (straight 3D chords would cut through the globe). */
+export function densify(pts: LatLon[], stepKm = 50): LatLon[] {
+  if (pts.length < 2) return pts.slice();
+  const out: LatLon[] = [pts[0]];
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1];
+    const b = pts[i];
+    const n = Math.min(200, Math.ceil(distKm(a[0], a[1], b[0], b[1]) / stepKm));
+    for (let k = 1; k <= n; k++) out.push(k === n ? b : interpolateGC(a, b, k / n));
+  }
+  return out;
+}

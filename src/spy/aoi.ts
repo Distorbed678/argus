@@ -20,7 +20,7 @@ import {
 import { bus, log } from '../core/bus';
 import { release } from '../core/target';
 import { setTool, clearTool, toolbar, type GlobeTool } from '../core/tools';
-import { shapeRing, shapeCenter, shapeRadiusKm, shapeAreaKm2, distKm, circleRing, fmtKm, fmtArea, type Shape, type LatLon } from '../core/geo';
+import { densify, shapeRing, shapeCenter, shapeRadiusKm, shapeAreaKm2, distKm, circleRing, fmtKm, fmtArea, type Shape, type LatLon } from '../core/geo';
 
 export interface Aoi {
   id: string;
@@ -72,7 +72,7 @@ function render() {
   fills = [];
   for (const a of list) {
     const ring = shapeRing(a.shape);
-    lines.add({ positions: toCart(ring), width: 2, material: outline() });
+    lines.add({ positions: toCart(densify(ring, 40)), width: 2, material: outline() });
     const c = shapeCenter(a.shape);
     labels.add({
       position: Cartesian3.fromDegrees(c.lon, c.lat, LIFT),
@@ -168,7 +168,7 @@ function setPreview(ring: LatLon[] | null) {
   }
   // the collection is rebuilt on render(); re-add if it was wiped
   if (!preview || !lines.contains(preview)) preview = lines.add({ width: 2, material: dashed() });
-  preview.positions = toCart(ring);
+  preview.positions = toCart(densify(ring, 40));
   preview.show = true;
   viewer.scene.requestRender();
 }

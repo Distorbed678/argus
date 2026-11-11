@@ -91,6 +91,7 @@ function aoiTab(el: HTMLElement) {
     <div class="intel-tools">
       <button class="btn" data-a="circle">+ CIRCLE</button>
       <button class="btn" data-a="poly">+ POLYGON</button>
+      <button class="btn" data-a="measure">⟷ MEASURE</button>
     </div>
     ${
       list.length
@@ -115,6 +116,7 @@ function aoiTab(el: HTMLElement) {
     <p class="dim intel-note">Alerts fire for military aircraft entering, earth-obs/military satellites overhead, and quakes, fire hotspots, GDACS and EONET events inside — for feeds that are switched on.</p>`;
   el.querySelector<HTMLElement>('[data-a="circle"]')!.onclick = () => startTool(() => drawCircle());
   el.querySelector<HTMLElement>('[data-a="poly"]')!.onclick = () => startTool(() => drawPolygon());
+  el.querySelector<HTMLElement>('[data-a="measure"]')!.onclick = () => startTool(() => void import('../spy/measure').then((m) => m.startMeasure()));
   el.querySelectorAll<HTMLElement>('.aoi-row').forEach((row) => {
     const id = row.dataset.id!;
     const a = list.find((x) => x.id === id)!;

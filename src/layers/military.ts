@@ -50,11 +50,11 @@ const factory: LayerFactory = (ctx) => {
     locate: (k) => r.locate(k),
     pick(key) {
       const a = r.acs.get(key);
-      return a ? acDossier(ctx.id, a, () => r.acs.get(key)) : undefined;
+      return a ? acDossier(ctx.id, a, () => r.acs.get(key), r.trails) : undefined;
     },
     find(q) {
       const s = q.trim().toUpperCase();
-      for (const a of r.acs.values()) if (a.flight?.toUpperCase() === s || a.hex.toUpperCase() === s) return acDossier(ctx.id, a, () => r.acs.get(a.hex));
+      for (const a of r.acs.values()) if (a.flight?.toUpperCase() === s || a.hex.toUpperCase() === s) return acDossier(ctx.id, a, () => r.acs.get(a.hex), r.trails);
       return;
     },
   };
