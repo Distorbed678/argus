@@ -59,12 +59,16 @@ export const LAYERS: LayerMeta[] = [
   gibs('aerosol', 'Smoke / aerosol index', 'WEATHER', 'OMPS_NOAA21_NadirMapper_AerosolIndex_380', 'GoogleMapsCompatible_Level6', 'png', { alpha: 0.7 }),
   { id: 'storms', name: 'Tropical cyclones + cones', category: 'WEATHER', source: 'NOAA NHC / CPHC (Atlantic, E+C Pacific)', load: () => import('./sky/storms') },
   { id: 'sondes', name: 'Weather balloons (radiosondes)', category: 'WEATHER', source: 'SondeHub amateur network', load: () => import('./sky/sondes') },
+  { id: 'airq', name: 'Air quality (sampled)', category: 'WEATHER', source: 'Open-Meteo air quality (CAMS)', load: () => import('./weather/airQuality') },
+  { id: 'waves', name: 'Ocean waves / swell (sampled)', category: 'WEATHER', source: 'Open-Meteo marine', load: () => import('./weather/marine') },
   { id: 'wind', name: 'Wind field (sampled)', category: 'WEATHER', source: 'Open-Meteo', load: () => import('./weather/wind') },
   // HAZARDS
   { id: 'quakes', name: 'Earthquakes (24h)', category: 'HAZARDS', source: 'USGS', load: () => import('./hazards/quakes') },
   { id: 'eonet', name: 'Natural events', category: 'HAZARDS', source: 'NASA EONET v3', load: () => import('./hazards/eonet') },
   { id: 'gdacs', name: 'Disaster alerts', category: 'HAZARDS', source: 'GDACS (UN/EC)', load: () => import('./hazards/gdacs') },
   { id: 'fires', name: 'Active fires (24h)', category: 'HAZARDS', source: 'NASA FIRMS MODIS (via proxy)', load: () => import('./hazards/fires') },
+  { id: 'tsunami', name: 'Tsunami bulletins', category: 'HAZARDS', source: 'NOAA NTWC + PTWC (via proxy)', load: () => import('./hazards/tsunami') },
+  { id: 'volcanoes', name: 'Volcanoes (Holocene)', category: 'HAZARDS', source: 'Smithsonian GVP (bundled snapshot)', load: () => import('./hazards/volcanoes') },
   { id: 'nws', name: 'US severe weather alerts', category: 'HAZARDS', source: 'NOAA NWS', load: () => import('./hazards/alerts') },
   // INTEL
   { id: 'cables', name: 'Undersea cables', category: 'INTEL', source: 'TeleGeography (bundled snapshot)', load: () => import('./intel/cables') },

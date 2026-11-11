@@ -17,6 +17,7 @@ export const PROXY_ALLOW = [
   'www.submarinecablemap.com',
   'api.ioda.inetintel.cc.gatech.edu',
   'tfr.faa.gov',
+  'www.tsunami.gov',
 ];
 
 const handler: Connect.NextHandleFunction = async (req, res, next) => {

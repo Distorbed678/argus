@@ -121,6 +121,26 @@ async function satellites() {
   console.log(`satellites: ${csv.split('\n').length - 1} elements`);
 }
 
+// Smithsonian GVP "Volcanoes of the World" Holocene list (their GeoServer has no browser CORS).
+async function volcanoes() {
+  const j = await json(
+    'https://webservices.volcano.si.edu/geoserver/GVP-VOTW/ows?service=WFS&version=2.0.0&request=GetFeature&typeName=GVP-VOTW:Smithsonian_VOTW_Holocene_Volcanoes&outputFormat=application/json',
+  );
+  // compact rows: [number, name, lat, lon, type, last eruption year (null = unknown), country, elevation m]
+  const rows = j.features
+    .filter((f) => f.geometry?.coordinates)
+    .map((f) => {
+      const p = f.properties;
+      return [p.Volcano_Number, p.Volcano_Name, round(f.geometry.coordinates[1]), round(f.geometry.coordinates[0]), p.Primary_Volcano_Type ?? '', p.Last_Eruption_Year ?? null, p.Country ?? '', p.Elevation ?? null];
+    });
+  if (rows.length < 500) throw new Error(`volcano list too small (${rows.length}) — keeping existing file`);
+  await writeFile(new URL('volcanoes.json', OUT), JSON.stringify({ generated: new Date().toISOString(), source: 'Smithsonian GVP VOTW', v: rows }));
+  console.log(`volcanoes: ${rows.length}`);
+}
+
 await mkdir(OUT, { recursive: true });
-const results = await Promise.allSettled([cables(), cameras(), centroids(), satellites()]);
+// optional filter: `node scripts/fetch-static-data.mjs volcanoes cameras`
+const JOBS = { cables, cameras, centroids, satellites, volcanoes };
+const only = process.argv.slice(2).filter((a) => a in JOBS);
+const results = await Promise.allSettled((only.length ? only : Object.keys(JOBS)).map((k) => JOBS[k]()));
 for (const r of results) if (r.status === 'rejected') console.error('FAILED:', r.reason?.message ?? r.reason);

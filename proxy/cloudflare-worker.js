@@ -17,6 +17,7 @@ const ALLOW = new Set([
   'www.submarinecablemap.com',
   'api.ioda.inetintel.cc.gatech.edu',
   'tfr.faa.gov',
+  'www.tsunami.gov',
 ]);
 
 const CORS = {
