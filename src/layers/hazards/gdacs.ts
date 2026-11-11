@@ -29,6 +29,7 @@ export default pointLayer<F>({
     const r = await getData<{ features: F[] }>('https://www.gdacs.org/gdacsapi/api/events/geteventlist/EVENTS4APP', { ttl: 19 * 60_000, persist: true });
     return { ...r, data: r.data.features.filter((f) => Array.isArray(f.geometry?.coordinates) && typeof f.geometry.coordinates[0] === 'number') };
   },
+  label: (f) => `${f.properties.alertlevel.toUpperCase()} ${f.properties.name}`,
   toItem: (f) => ({
     key: `${f.properties.eventtype}${f.properties.eventid}`,
     lon: f.geometry.coordinates[0],

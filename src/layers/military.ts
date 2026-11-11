@@ -47,6 +47,7 @@ const factory: LayerFactory = (ctx) => {
       poller?.stop();
       r.stop();
     },
+    locate: (k) => r.locate(k),
     pick(key) {
       const a = r.acs.get(key);
       return a ? acDossier(ctx.id, a, () => r.acs.get(key)) : undefined;

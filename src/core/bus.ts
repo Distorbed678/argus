@@ -1,5 +1,5 @@
 // Tiny typed event bus.
-import type { Dossier, LayerStatus } from '../layers/Layer';
+import type { Dossier, FeedItem, LayerStatus } from '../layers/Layer';
 
 export type LogLevel = 'info' | 'warn' | 'alert' | 'ok';
 export interface LogEntry {
@@ -19,6 +19,10 @@ export interface Events {
   settings: void;
   mode: string;
   visibility: boolean;
+  /** a layer finished a refresh: its full current item list */
+  feed: { layer: string; items: FeedItem[] };
+  aoi: void;
+  watch: void;
 }
 
 type Handler<T> = (payload: T) => void;

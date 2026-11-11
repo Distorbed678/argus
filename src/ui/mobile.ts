@@ -4,7 +4,7 @@ import { MODES, setMode } from '../fx/postfx';
 import { settings } from '../core/store';
 import { select } from '../core/target';
 
-const SHEETS = ['layers', 'log', 'modes', 'timeline'];
+const SHEETS = ['layers', 'log', 'modes', 'timeline', 'intel'];
 const small = () => matchMedia('(max-width: 860px)').matches;
 let openSheetFn: (id: string | null) => void = () => {};
 

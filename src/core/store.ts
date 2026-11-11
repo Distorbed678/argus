@@ -12,6 +12,7 @@ export interface Settings {
   labels: boolean;
   bootSeen: boolean;
   gdeltQuery: string;
+  notify: boolean;
 }
 
 const KEY = 'argus.settings.v1';
@@ -29,6 +30,7 @@ const defaults: Settings = {
   labels: true,
   bootSeen: false,
   gdeltQuery: 'ARMEDCONFLICT,PROTEST,TERROR,CYBER_ATTACK',
+  notify: false,
 };
 
 function load(): Settings {

@@ -21,6 +21,10 @@ import { initPicker } from './ui/picker';
 import { initPanels } from './ui/mobile';
 import { openSettings, applyFxClass } from './ui/settings';
 import { openAR } from './ar/skyview';
+import { initAoi } from './spy/aoi';
+import { initAlerts } from './spy/alerts';
+import { initWatchlist } from './spy/watchlist';
+import { initIntel } from './ui/intel';
 
 applyFxClass();
 document.body.dataset.mode = settings.mode;
@@ -40,6 +44,10 @@ initTimeline();
 initCommandLine(viewer);
 initPicker(viewer);
 initPanels();
+initAoi(viewer);
+initAlerts();
+initWatchlist(viewer);
+initIntel();
 
 document.getElementById('btn-settings')!.onclick = openSettings;
 document.getElementById('btn-ar')!.onclick = () => openAR();

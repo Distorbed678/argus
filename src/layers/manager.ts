@@ -2,7 +2,7 @@ import type { Viewer } from 'cesium';
 import { bus, log } from '../core/bus';
 import { settings, setLayerPersisted } from '../core/store';
 import { selected, select } from '../core/target';
-import type { Dossier, LayerInstance, LayerMeta, LayerStatus } from './Layer';
+import type { Dossier, Fix, LayerInstance, LayerMeta, LayerStatus } from './Layer';
 import { LAYERS } from './registry';
 
 interface State {
@@ -17,6 +17,7 @@ interface State {
 
 const states = new Map<string, State>();
 const pickers = new Map<string, (key: string) => Dossier | undefined | Promise<Dossier | undefined>>();
+const locators = new Map<string, (key: string) => Fix | undefined>();
 const finders = new Map<string, (q: string) => Dossier | undefined | Promise<Dossier | undefined>>();
 let viewer: Viewer;
 
@@ -27,6 +28,14 @@ export function initLayers(v: Viewer) {
 
 export function registerPicker(ns: string, fn: (key: string) => Dossier | undefined | Promise<Dossier | undefined>) {
   pickers.set(ns, fn);
+}
+export function registerLocator(ns: string, fn: (key: string) => Fix | undefined) {
+  locators.set(ns, fn);
+}
+/** Position of an object without side effects (undefined when the layer is off or lost it). */
+export function locateById(ns: string, key: string): Fix | undefined {
+  if (ns !== 'sat' && !states.get(ns)?.on) return undefined;
+  return locators.get(ns)?.(key);
 }
 export function registerFinder(ns: string, fn: (q: string) => Dossier | undefined | Promise<Dossier | undefined>) {
   finders.set(ns, fn);
@@ -89,6 +98,7 @@ export async function toggle(id: string, on: boolean, persist = true) {
       });
       if (s.inst.pick) registerPicker(id, s.inst.pick.bind(s.inst));
       if (s.inst.find) registerFinder(id, s.inst.find.bind(s.inst));
+      if (s.inst.locate) registerLocator(id, s.inst.locate.bind(s.inst));
     }
     if (!s.on) return; // toggled off while loading
     await s.inst.enable();

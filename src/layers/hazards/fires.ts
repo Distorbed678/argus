@@ -44,6 +44,7 @@ export default pointLayer<Fire>({
     });
     return { ...r, data: parse(r.data) };
   },
+  label: (f) => `fire hotspot ${f.frp.toFixed(0)} MW (${f.date} ${f.time})`,
   toItem: (f) => ({
     key: `${f.lat.toFixed(3)},${f.lon.toFixed(3)},${f.time}`,
     lon: f.lon,

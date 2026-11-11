@@ -25,6 +25,11 @@ const HELP: [string, string][] = [
   ['pov [sat]', 'ride along with a satellite looking down'],
   ['passes [sat]', 'next passes over your GPS position'],
   ['overhead', 'satellites above your horizon right now'],
+  ['aoi add <name> <lat,lon> <km>', 'arm a circular watch area (alerts in the log)'],
+  ['aoi draw [circle|poly]', 'draw a watch area on the globe'],
+  ['aoi list | aoi del <name> | aoi fly <name>', 'manage watch areas'],
+  ['pin | unpin', 'add / remove the selected target to the watchlist'],
+  ['intel [aoi|watch]', 'open the intel panel'],
   ['layer <name> on|off', 'toggle a feed (layer flights on, layer quakes off)'],
   ['layers', 'list all feeds and their status'],
   ['mode <id>', `imaging mode: ${MODES.map((m) => m.id).join(' | ')}`],
@@ -201,6 +206,61 @@ export async function run(line: string, print: (h: string) => void): Promise<boo
       print(`<span class="h"><b>${list.length}</b> objects above 10° over ${fmtLL(obs.lat, obs.lon)} (${obs.source}). top 15:</span>`);
       for (const o of list.slice(0, 15)) print(`  ${esc(satEngine.meta[o.idx].name.padEnd(26))} el ${o.el.toFixed(0).padStart(3)}°  az ${o.az.toFixed(0).padStart(3)}°  ${o.alt.toFixed(0)} km`);
       return false;
+    }
+    case 'aoi': {
+      const A = await import('../spy/aoi');
+      const [sub, ...more] = rest;
+      const sa = (sub ?? 'list').toLowerCase();
+      const tail = more.join(' ');
+      if (sa === 'add') {
+        const m = tail.match(/^(.*?)\s*(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s*(?:km)?$/i);
+        if (!m) return err('usage: aoi add <name> <lat,lon> <km>   e.g. aoi add Kyiv 50.45,30.52 60'), false;
+        const lat = +m[2], lon = +m[3], km = +m[4];
+        if (Math.abs(lat) > 90 || Math.abs(lon) > 180 || !(km > 0) || km > 5000) return err('lat ±90, lon ±180, 0 < km ≤ 5000'), false;
+        const a = A.addAoi(m[1] || '', { kind: 'circle', lat, lon, km });
+        ok(`watch area ${esc(a.name)} armed: ${fmtLL(lat, lon)} r=${km} km`);
+        A.flyToAoi(a);
+        return true;
+      }
+      if (sa === 'draw') {
+        if (/^p/i.test(tail)) A.drawPolygon();
+        else A.drawCircle();
+        return true;
+      }
+      if (sa === 'del' || sa === 'rm' || sa === 'delete') {
+        const a = A.findAoi(tail);
+        if (!a) return err(`no watch area "${esc(tail)}"`), false;
+        A.removeAoi(a.id);
+        ok(`${esc(a.name)} removed`);
+        return false;
+      }
+      if (sa === 'fly' || sa === 'goto') {
+        const a = A.findAoi(tail);
+        if (!a) return err(`no watch area "${esc(tail)}"`), false;
+        A.flyToAoi(a);
+        return true;
+      }
+      const all = A.aois();
+      if (!all.length) print('<span class="h">no watch areas — aoi add &lt;name&gt; &lt;lat,lon&gt; &lt;km&gt; or aoi draw</span>');
+      for (const a of all) print(`  <b>${esc(a.name.padEnd(16))}</b> ${esc(A.describeShape(a.shape))}`);
+      return false;
+    }
+    case 'pin':
+    case 'unpin': {
+      const d = selected();
+      if (!d) return err('select a target first'), false;
+      const { togglePin, isPinned } = await import('../spy/watchlist');
+      if ((cmd === 'pin') === isPinned(d)) return ok(`${esc(d.title)} already ${cmd === 'pin' ? 'pinned' : 'not pinned'}`), false;
+      togglePin(d);
+      ok(`${esc(d.title)} ${cmd === 'pin' ? 'pinned' : 'unpinned'}`);
+      return false;
+    }
+    case 'intel':
+    case 'watch':
+    case 'watchlist': {
+      const { openIntel } = await import('./intel');
+      openIntel(cmd === 'intel' ? (arg || undefined) : 'watch');
+      return true;
     }
     case 'layer':
     case 'l': {

@@ -31,6 +31,7 @@
         <div class="ro hide-sm hide-md"><span>FPS</span><b id="ro-fps">—</b></div>
       </div>
       <div class="top-actions">
+        <button class="icon-btn hide-sm" id="btn-intel" title="Intel: watch areas, watchlist, threat board">◈</button>
         <button class="icon-btn" id="btn-cmd" title="Command line (/)">⌘</button>
         <button class="icon-btn" id="btn-locate" title="Locate me">◎</button>
         <button class="icon-btn" id="btn-ar" title="AR sky view">AR</button>
@@ -45,6 +46,12 @@
     </aside>
 
     <aside id="dossier" class="panel" hidden></aside>
+
+    <aside id="intel" class="panel" hidden>
+      <div class="panel-head"><span class="hud-title">INTEL</span><button class="x" aria-label="Close">×</button></div>
+      <div class="intel-tabs"></div>
+      <div class="intel-body"></div>
+    </aside>
 
     <section id="log" class="panel">
       <div class="panel-head"><span class="hud-title">INTERCEPT LOG</span><span class="blink">●</span><button class="x" data-close="log">×</button></div>
@@ -70,6 +77,7 @@
       <button data-sheet="log">LOG</button>
       <button data-sheet="modes">MODE</button>
       <button data-sheet="timeline">TIME</button>
+      <button data-sheet="intel">INTEL</button>
       <button id="mb-cmd">CMD</button>
     </nav>
 

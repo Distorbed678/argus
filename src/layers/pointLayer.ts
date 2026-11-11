@@ -12,7 +12,8 @@ import {
 } from 'cesium';
 import { Poller, describeError } from '../data/fetcher';
 import { icon as mkIcon } from '../core/fmt';
-import { pid, type Dossier, type LayerFactory, type LayerCtx } from './Layer';
+import { bus } from '../core/bus';
+import { pid, type Dossier, type FeedItem, type LayerFactory, type LayerCtx } from './Layer';
 
 export interface Item {
   key: string;
@@ -34,6 +35,8 @@ export interface PointLayerOpts<T> {
   points?: boolean; // use PointPrimitives (huge counts) instead of billboards
   onNew?: (t: T, ctx: LayerCtx) => void;
   match?: (t: T, q: string) => boolean;
+  /** short human label for alerts / feeds (defaults to the key) */
+  label?: (t: T) => string;
   scale?: NearFarScalar;
   onEnable?: (ctx: LayerCtx) => void;
   onDisable?: (ctx: LayerCtx) => void;
@@ -98,6 +101,9 @@ export function pointLayer<T>(o: PointLayerOpts<T>): LayerFactory {
           }
         }
         first = false;
+        const feed: FeedItem[] = [];
+        for (const [k, it] of itemPos) feed.push({ key: k, lat: it.lat, lon: it.lon, label: o.label ? o.label(items.get(k)!) : k });
+        bus.emit('feed', { layer: ctx.id, items: feed });
         ctx.status(r.stale ? 'cached' : r.fromCache ? 'cached' : 'live', o.detail, prims.size);
         ctx.requestRender();
       } catch (e) {
@@ -138,8 +144,13 @@ export function pointLayer<T>(o: PointLayerOpts<T>): LayerFactory {
         items.clear();
         itemPos.clear();
         o.onDisable?.(ctx);
+        bus.emit('feed', { layer: ctx.id, items: [] });
       },
       pick: build,
+      locate(key) {
+        const it = itemPos.get(key);
+        return it ? { lat: it.lat, lon: it.lon, alt: it.h } : undefined;
+      },
       find(q) {
         if (!o.match) return;
         for (const [k, t] of items) if (o.match(t, q)) return build(k);

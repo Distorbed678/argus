@@ -4,7 +4,8 @@ import { BillboardCollection, Cartesian3, NearFarScalar, type Billboard } from '
 import { getData, describeError, Poller } from '../data/fetcher';
 import { cameraInfo, viewCenter } from '../core/viewer';
 import { icon, fmtLL, ago } from '../core/fmt';
-import { pid, type Dossier, type LayerFactory } from './Layer';
+import { bus } from '../core/bus';
+import { pid, type Dossier, type Fix, type LayerFactory } from './Layer';
 
 export interface Ac {
   hex: string;
@@ -159,6 +160,7 @@ export function acRenderer(ctx: Parameters<LayerFactory>[0]) {
       coll = undefined;
       bbs.clear();
       acs.clear();
+      bus.emit('feed', { layer: ctx.id, items: [] });
     },
     update(list: Ac[], replace: boolean, onNew?: (a: Ac) => void) {
       if (!coll) return;
@@ -187,6 +189,13 @@ export function acRenderer(ctx: Parameters<LayerFactory>[0]) {
         }
       }
       ctx.requestRender();
+      bus.emit('feed', { layer: ctx.id, items: [...acs.values()].map((a) => ({ key: a.hex, lat: a.lat, lon: a.lon, label: `${a.flight || a.hex.toUpperCase()}${a.t ? ' ' + a.t : ''}` })) });
+    },
+    locate(hex: string): Fix | undefined {
+      const a = acs.get(hex);
+      if (!a) return;
+      const p = deadReckon(a, Date.now());
+      return { lat: p.lat, lon: p.lon, alt: a.alt === 'ground' ? 0 : a.alt * 0.3048, t: a.seen };
     },
   };
 }
@@ -293,6 +302,7 @@ const factory: LayerFactory = (ctx) => {
       const a = r.acs.get(key);
       return a ? acDossier(ctx.id, a, () => r.acs.get(key)) : undefined;
     },
+    locate: (k) => r.locate(k),
     find(q) {
       const s = q.trim().toUpperCase();
       for (const a of r.acs.values()) if (a.flight?.toUpperCase() === s || a.hex.toUpperCase() === s || a.r?.toUpperCase() === s) return acDossier(ctx.id, a, () => r.acs.get(a.hex));

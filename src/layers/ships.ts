@@ -125,6 +125,10 @@ const factory: LayerFactory = (ctx) => {
       bbs.clear();
       ships.clear();
     },
+    locate(key) {
+      const s = ships.get(Number(key));
+      return s ? { lat: s.lat, lon: s.lon, alt: 0, t: s.t } : undefined;
+    },
     async pick(key) {
       const s = ships.get(Number(key));
       if (!s) return;

@@ -17,6 +17,7 @@ export default pointLayer<Q>({
     const r = await getData<{ features: Q[] }>('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson', { ttl: 55_000 });
     return { ...r, data: r.data.features };
   },
+  label: (q) => `M${q.properties.mag.toFixed(1)} ${q.properties.place}`,
   toItem: (q) => ({
     key: q.id,
     lon: q.geometry.coordinates[0],

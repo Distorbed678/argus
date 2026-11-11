@@ -3,6 +3,7 @@ import { bus } from '../core/bus';
 import { esc } from '../core/fmt';
 import { select, lock, release, flyToDossier } from '../core/target';
 import type { Dossier } from '../layers/Layer';
+import { isPinned, togglePin } from '../spy/watchlist';
 
 export function initDossier() {
   const el = document.getElementById('dossier')!;
@@ -44,6 +45,13 @@ export function initDossier() {
       if (!d.actions?.some((a) => a.label === 'LOCK')) mk('LOCK', () => lock());
     }
     for (const a of d.actions ?? []) mk(a.label, a.run);
+    const pin = mk(isPinned(d) ? '★ PINNED' : '☆ PIN', () => {
+      const on = togglePin(d);
+      pin.textContent = on ? '★ PINNED' : '☆ PIN';
+      pin.classList.toggle('pinned', on);
+    });
+    pin.classList.toggle('pinned', isPinned(d));
+    pin.title = 'Add to / remove from the watchlist';
     mk('RELEASE', () => release()).classList.add('danger');
     updateLive();
   };

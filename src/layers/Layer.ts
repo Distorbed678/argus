@@ -26,6 +26,26 @@ export interface Dossier {
   onClose?: () => void;
   /** Preferred camera range when locking on (meters). */
   range?: number;
+  /** Stable id for the watchlist across reloads (NORAD id, ICAO hex, MMSI…). Defaults to key. */
+  ref?: string;
+  /** Recent track for trail drawing (oldest first). */
+  trail?: () => Cartesian3[] | undefined;
+}
+
+/** Lightweight position fix for the watchlist / alerts. alt in metres, t = ms epoch of the fix. */
+export interface Fix {
+  lat: number;
+  lon: number;
+  alt?: number;
+  t?: number;
+}
+
+/** A position published by a layer after each refresh (consumed by AOI alerts + threat board). */
+export interface FeedItem {
+  key: string;
+  lat: number;
+  lon: number;
+  label: string;
 }
 
 export interface LayerCtx {
@@ -42,6 +62,8 @@ export interface LayerInstance {
   pick?(key: string): Dossier | undefined | Promise<Dossier | undefined>;
   /** Command-line search: return a dossier if this layer owns a matching object. */
   find?(q: string): Dossier | undefined | Promise<Dossier | undefined>;
+  /** Current position of one of this layer's objects, without selecting it. */
+  locate?(key: string): Fix | undefined;
 }
 
 export type LayerFactory = (ctx: LayerCtx) => LayerInstance;

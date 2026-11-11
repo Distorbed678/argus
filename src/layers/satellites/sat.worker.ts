@@ -3,6 +3,7 @@
 import { json2satrec, propagate, gstime, eciToEcf, ecfToLookAngles, eciToGeodetic, type SatRec, type OMMJsonObject } from 'satellite.js';
 
 import { parseCsv } from './omm';
+import { inShape, type Shape } from '../../core/geo';
 
 let recs: (SatRec | null)[] = [];
 let mask: Uint8Array | null = null;
@@ -13,7 +14,8 @@ type Msg =
   | { type: 'vis'; mask: Uint8Array }
   | { type: 'tick'; t: number; id: number }
   | { type: 'passes'; idx: number; lat: number; lon: number; h: number; t: number; hours: number; reqId: number }
-  | { type: 'overhead'; lat: number; lon: number; h: number; t: number; minEl: number; reqId: number };
+  | { type: 'overhead'; lat: number; lon: number; h: number; t: number; minEl: number; reqId: number }
+  | { type: 'aoiSats'; idxs: Int32Array; shapes: Shape[]; t: number; reqId: number };
 
 function ecefAt(rec: SatRec, date: Date, gmst: number) {
   const pv = propagate(rec, date);
@@ -100,6 +102,23 @@ self.onmessage = (ev: MessageEvent<Msg>) => {
     }
     res.sort((a, b) => b.el - a.el);
     (self as any).postMessage({ type: 'overhead', reqId: m.reqId, list: res });
+  } else if (m.type === 'aoiSats') {
+    // which candidate satellites have their sub-satellite point inside each AOI right now
+    const d = new Date(m.t);
+    const g = gstime(d);
+    const hits: { aoi: number; idx: number; lat: number; lon: number; alt: number }[] = [];
+    for (const i of m.idxs) {
+      const r = recs[i];
+      if (!r) continue;
+      const pv = propagate(r, d);
+      if (!pv || !pv.position || typeof pv.position === 'boolean') continue;
+      const geo = eciToGeodetic(pv.position, g);
+      const lat = geo.latitude / DEG;
+      const lon = geo.longitude / DEG;
+      if (!Number.isFinite(lat)) continue;
+      for (let k = 0; k < m.shapes.length; k++) if (inShape(lat, lon, m.shapes[k])) hits.push({ aoi: k, idx: i, lat, lon, alt: geo.height });
+    }
+    (self as any).postMessage({ type: 'aoiSats', reqId: m.reqId, list: hits });
   }
 };
 

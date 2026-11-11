@@ -45,6 +45,7 @@ export default pointLayer<Ev>({
     const r = await getData<{ events: Ev[] }>('https://eonet.gsfc.nasa.gov/api/v3/events?status=open&days=30', { ttl: 14 * 60_000, persist: true });
     return { ...r, data: r.data.events };
   },
+  label: (e) => `${e.categories[0]?.title ?? 'event'}: ${e.title}`,
   toItem: (e) => {
     const p = lastPoint(e);
     if (!p) return null;

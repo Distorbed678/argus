@@ -29,6 +29,10 @@ export function openSettings() {
       <label class="toggle"><input type="checkbox" id="s-fx"> Reduce effects (no rain, glitch, scanlines, CRT)</label>
       <label class="toggle"><input type="checkbox" id="s-hq"> High quality (full device resolution + FXAA) — heavier on phones</label>
 
+      <h3>ALERTS</h3>
+      <label class="toggle"><input type="checkbox" id="s-notify"> Browser notifications for watch-area (AOI) alerts</label>
+      <p class="note" id="s-notify-note"></p>
+
       <h3>API KEYS (OPTIONAL · STORED ONLY IN THIS BROWSER)</h3>
       <div class="field"><label>Cesium ion token — world terrain + 3D buildings (free at cesium.com/ion)</label><input type="password" id="k-ion" value="${esc(k.ion)}" autocomplete="off"></div>
       <div class="field"><label>aisstream.io key — global live ships in view (free at aisstream.io)</label><input type="password" id="k-ais" value="${esc(k.aisstream)}" autocomplete="off"></div>
@@ -57,6 +61,15 @@ export function openSettings() {
   $<HTMLInputElement>('s-labels').checked = settings.labels;
   $<HTMLInputElement>('s-fx').checked = settings.reduceFx;
   $<HTMLInputElement>('s-hq').checked = settings.highQuality;
+  const nt = $<HTMLInputElement>('s-notify');
+  const nNote = $('s-notify-note');
+  const perm = () => (typeof Notification === 'undefined' ? 'unsupported' : Notification.permission);
+  nt.checked = settings.notify && perm() === 'granted';
+  nNote.textContent = perm() === 'denied' ? 'Notifications are blocked for this site in your browser settings.' : perm() === 'unsupported' ? 'This browser does not support notifications.' : 'Alerts always appear in the intercept log; this also raises a system notification.';
+  nt.onchange = async () => {
+    if (nt.checked && perm() === 'default') nt.checked = (await Notification.requestPermission()) === 'granted';
+    else if (nt.checked && perm() !== 'granted') nt.checked = false;
+  };
   const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close();
   const close = () => {
     root.hidden = true;
@@ -75,6 +88,7 @@ export function openSettings() {
       labels: $<HTMLInputElement>('s-labels').checked,
       reduceFx: $<HTMLInputElement>('s-fx').checked,
       highQuality: $<HTMLInputElement>('s-hq').checked,
+      notify: $<HTMLInputElement>('s-notify').checked,
       proxyUrl: $<HTMLInputElement>('s-proxy').value.trim(),
       gdeltQuery: $<HTMLInputElement>('s-gdelt').value.trim() || settings.gdeltQuery,
       keys: { ion: $<HTMLInputElement>('k-ion').value.trim(), aisstream: $<HTMLInputElement>('k-ais').value.trim(), windy: $<HTMLInputElement>('k-windy').value.trim() },

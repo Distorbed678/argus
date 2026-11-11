@@ -29,6 +29,7 @@ import type { Dossier } from '../Layer';
 import { categorize, SAT_CATS, CAT_INDEX, type SatCat } from './categories';
 import { pid } from '../Layer';
 import { parseCsv } from './omm';
+import type { Shape } from '../../core/geo';
 
 export interface SatMeta {
   name: string;
@@ -265,7 +266,7 @@ class SatEngine {
     } else if (m.type === 'loaded') {
       log('SGP4', `propagator armed: ${m.ok.toLocaleString()}/${m.n.toLocaleString()} orbits solved`, 'ok');
       this.lastTick = 0;
-    } else if (m.type === 'passes' || m.type === 'overhead') {
+    } else if (m.type === 'passes' || m.type === 'overhead' || m.type === 'aoiSats' || m.type === 'revisit') {
       this.pending.get(m.reqId)?.(m.type === 'passes' ? m.passes : m.list);
       this.pending.delete(m.reqId);
     }
@@ -285,6 +286,22 @@ class SatEngine {
 
   overhead(lat: number, lon: number, h = 0, minEl = 10) {
     return this.ask<{ idx: number; az: number; el: number; range: number; alt: number }[]>({ type: 'overhead', lat, lon, h, t: simNow(), minEl });
+  }
+
+  /** Catalog indices of the given categories (e.g. earth-obs + military for AOI watch / revisit). */
+  indicesOf(cats: SatCat[]): Int32Array {
+    const out: number[] = [];
+    for (let i = 0; i < this.meta.length; i++) if (cats.includes(this.meta[i].cat)) out.push(i);
+    return Int32Array.from(out);
+  }
+
+  /** Satellites whose sub-point is inside each shape at time t (worker). */
+  aoiSats(idxs: Int32Array, shapes: Shape[], t = simNow()) {
+    return this.ask<{ aoi: number; idx: number; lat: number; lon: number; alt: number }[]>({ type: 'aoiSats', idxs, shapes, t });
+  }
+
+  get ready() {
+    return this.meta.length > 0 && !!this.worker;
   }
 
   /** Precise position for one sat (main thread) – used for lock/POV/dossier. */
@@ -413,6 +430,7 @@ class SatEngine {
     return {
       layer: 'sat',
       key: String(idx),
+      ref: String(m.norad),
       kind: 'SATELLITE',
       title: m.name,
       subtitle: `${catLabel} · ${regime}`,
