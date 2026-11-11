@@ -46,6 +46,8 @@ export const LAYERS: LayerMeta[] = [
   // AIR
   { id: 'flights', name: 'Live flights', category: 'AIR', source: 'adsb.lol → adsb.fi → OpenSky (via proxy)', load: () => import('./flights') },
   { id: 'mil-air', name: 'Military aircraft', category: 'AIR', source: 'adsb.lol /v2/mil (via proxy)', load: () => import('./military') },
+  { id: 'tfr', name: 'US flight restrictions (TFR)', category: 'AIR', source: 'FAA TFR GeoServer (via proxy)', load: () => import('./intel/tfr') },
+  { id: 'gpsjam', name: 'GPS interference (estimate)', category: 'AIR', source: 'ADS-B NACp aggregation (adsb.lol via proxy)', note: 'Share of airborne aircraft reporting NACp < 8 per 1° cell over 30 min. An estimate: avionics faults degrade NACp too.', load: () => import('./intel/gpsjam') },
   // SEA/LAND
   { id: 'ships', name: 'Ships (AIS)', category: 'SEA/LAND', source: 'Digitraffic AIS (Baltic) + aisstream.io (key)', needsKey: 'aisstream', keyOptional: true, load: () => import('./ships') },
   { id: 'trains', name: 'Live trains (Finland)', category: 'SEA/LAND', source: 'Digitraffic rail GPS', load: () => import('./trains') },

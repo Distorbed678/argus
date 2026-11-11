@@ -16,6 +16,7 @@ const ALLOW = new Set([
   'webcams.nyctmc.org',
   'www.submarinecablemap.com',
   'api.ioda.inetintel.cc.gatech.edu',
+  'tfr.faa.gov',
 ]);
 
 const CORS = {

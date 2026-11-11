@@ -26,6 +26,9 @@ export interface Ac {
   country?: string;
   seen: number; // ms epoch when fix was valid
   src: string;
+  /** ADS-B navigation accuracy / integrity (absent for OpenSky) */
+  nacp?: number;
+  nic?: number;
 }
 
 const EMERG: Record<string, string> = { '7500': 'HIJACK', '7600': 'RADIO FAILURE', '7700': 'GENERAL EMERGENCY' };
@@ -49,6 +52,8 @@ export function fromAdsb(a: any, now: number, src: string): Ac | null {
     mil: !!(a.dbFlags & 1),
     seen: now - (a.seen_pos ?? a.seen ?? 0) * 1000,
     src,
+    nacp: typeof a.nac_p === 'number' ? a.nac_p : undefined,
+    nic: typeof a.nic === 'number' ? a.nic : undefined,
   };
 }
 
@@ -202,6 +207,8 @@ export function acRenderer(ctx: Parameters<LayerFactory>[0]) {
         }
       }
       ctx.requestRender();
+      const nav = list.filter((a) => a.nacp != null && a.alt !== 'ground');
+      if (nav.length) bus.emit('nav', { src: ctx.id, items: nav.map((a) => ({ hex: a.hex, lat: a.lat, lon: a.lon, nacp: a.nacp!, nic: a.nic, t: a.seen })) });
       bus.emit('feed', { layer: ctx.id, items: [...acs.values()].map((a) => ({ key: a.hex, lat: a.lat, lon: a.lon, label: `${a.flight || a.hex.toUpperCase()}${a.t ? ' ' + a.t : ''}` })) });
     },
     locate(hex: string): Fix | undefined {

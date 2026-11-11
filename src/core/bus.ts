@@ -22,6 +22,8 @@ export interface Events {
   /** a layer finished a refresh: its full current item list */
   feed: { layer: string; items: FeedItem[] };
   aoi: void;
+  /** ADS-B navigation quality reports (for the GPS-interference estimate) */
+  nav: { src: string; items: { hex: string; lat: number; lon: number; nacp: number; nic?: number; t: number }[] };
   watch: void;
 }
 

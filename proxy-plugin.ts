@@ -16,6 +16,7 @@ export const PROXY_ALLOW = [
   'webcams.nyctmc.org',
   'www.submarinecablemap.com',
   'api.ioda.inetintel.cc.gatech.edu',
+  'tfr.faa.gov',
 ];
 
 const handler: Connect.NextHandleFunction = async (req, res, next) => {
