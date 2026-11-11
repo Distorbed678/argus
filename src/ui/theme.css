@@ -488,3 +488,16 @@ body.tool-active #crosshair { opacity: 0.9; }
   #intel { left: auto !important; right: 0 !important; width: min(380px, 55vw) !important; top: calc(var(--top) + env(safe-area-inset-top, 0px)) !important; bottom: calc(44px + var(--safe-b)) !important; max-height: none !important; height: auto !important; border-left: 1px solid var(--line); }
   #toolbar { left: 8px; transform: none; width: min(420px, 50vw); }
 }
+
+/* revisit forecast */
+.rv-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.rv-table th { text-align: left; color: var(--dim); font-weight: normal; font-size: 9px; letter-spacing: 1px; padding: 2px 0; }
+.rv-table td { padding: 3px 2px; border-bottom: 1px dotted rgba(79, 195, 255, 0.12); white-space: nowrap; }
+.rv-table td:nth-child(2) { white-space: normal; word-break: break-word; }
+.rv-table td:nth-child(3) { color: var(--green); text-align: right; }
+.rv-table td:nth-child(4) { text-align: right; color: var(--dim); }
+.rv-table tr[data-idx] { cursor: pointer; }
+.rv-table tr[data-idx]:hover td { background: rgba(47, 128, 255, 0.1); }
+.rv-table i { display: inline-block; width: 6px; height: 6px; margin-right: 5px; vertical-align: middle; }
+.rv-note { font-size: 10px; margin-top: 8px; line-height: 1.4; }
+@media (max-width: 860px) { .rv-table td { padding: 8px 2px; } }

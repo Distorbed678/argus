@@ -27,6 +27,7 @@ export function groundDossier(lat: number, lon: number): Dossier {
     range: 20000,
     actions: [
       { label: 'SET OBSERVER', run: () => setObserver(lat, lon) },
+      { label: 'REVISIT', run: () => void import('../../spy/revisit').then((m) => m.openRevisit(lat, lon, fmtLL(lat, lon))) },
       { label: 'MAPS ↗', run: () => window.open(`https://www.google.com/maps/@${lat},${lon},16z/data=!3m1!1e3`, '_blank', 'noopener') },
     ],
   };

@@ -12,6 +12,14 @@ import {
   Material,
   VerticalOrigin,
   BlendOption,
+  Primitive,
+  GeometryInstance,
+  CylinderGeometry,
+  CorridorGeometry,
+  PerInstanceColorAppearance,
+  ColorGeometryInstanceAttribute,
+  Transforms,
+  Matrix4,
   type PointPrimitive,
   type Label,
   type Polyline,
@@ -29,7 +37,9 @@ import type { Dossier } from '../Layer';
 import { categorize, SAT_CATS, CAT_INDEX, type SatCat } from './categories';
 import { pid } from '../Layer';
 import { parseCsv } from './omm';
+import { swathFor, type Swath } from './swath';
 import type { Shape } from '../../core/geo';
+import type { RevisitPass } from './sat.worker';
 
 export interface SatMeta {
   name: string;
@@ -84,6 +94,11 @@ class SatEngine {
   private colors = SAT_CATS.map((c) => Color.fromCssColorString(c.color));
   private catCounts = new Map<SatCat, number>();
   private lastStatusErr: string | null = null;
+  /** sensor view cone (unit cone scaled per frame) + approximate swath strip for the selection */
+  private cone?: Primitive;
+  private strip?: Primitive;
+  private selSwath: Swath | null = null;
+  private coneAt = 0;
 
   onCount(fn: Listener) {
     this.listeners.add(fn);
@@ -99,6 +114,7 @@ class SatEngine {
       this.worker = new Worker(new URL('./sat.worker.ts', import.meta.url), { type: 'module' });
       this.worker.onmessage = (ev) => this.onWorker(ev.data);
       viewer.scene.preUpdate.addEventListener(() => this.frame());
+      viewer.scene.preUpdate.addEventListener(() => this.updateCone());
       registerPicker('sat', (k) => this.dossier(Number(k)));
       registerFinder('sat', (q) => this.find(q));
 
@@ -300,6 +316,11 @@ class SatEngine {
     return this.ask<{ aoi: number; idx: number; lat: number; lon: number; alt: number }[]>({ type: 'aoiSats', idxs, shapes, t });
   }
 
+  /** Next passes of the given satellites over one point (worker, chunked). */
+  revisit(idxs: Int32Array, lat: number, lon: number, hours = 24, minEl = 30, t = simNow()) {
+    return this.ask<RevisitPass[]>({ type: 'revisit', idxs, lat, lon, hours, minEl, t });
+  }
+
   get ready() {
     return this.meta.length > 0 && !!this.worker;
   }
@@ -362,6 +383,7 @@ class SatEngine {
     this.trackLine!.positions = track;
     this.trackLine!.material = Material.fromType('PolylineDash', { color: color.withAlpha(0.55), dashLength: 12 });
     this.orbitLine.show = this.trackLine!.show = true;
+    this.drawStrip(track);
     this.viewer.scene.requestRender();
   }
 
@@ -382,7 +404,77 @@ class SatEngine {
     this.footLine.show = true;
   }
 
+  private updateCone() {
+    if (!this.cone) return;
+    const t = simNow();
+    if (this.selIdx < 0 || !this.selSwath) {
+      if (this.cone.show) this.cone.show = false;
+      return;
+    }
+    if (t === this.coneAt) return;
+    this.coneAt = t;
+    const s = this.state(this.selIdx, t);
+    if (!s || s.alt > 3000) {
+      this.cone.show = false;
+      return;
+    }
+    const alt = s.alt * 1000;
+    const r = Math.min(this.selSwath.km / 2, Math.acos(RE / (RE + s.alt)) * RE) * 1000;
+    const m = Transforms.eastNorthUpToFixedFrame(Cartesian3.fromDegrees(s.lon, s.lat, 0), undefined, new Matrix4());
+    Matrix4.multiplyByTranslation(m, new Cartesian3(0, 0, alt / 2), m);
+    Matrix4.multiplyByScale(m, new Cartesian3(r, r, alt), m);
+    this.cone.modelMatrix = m;
+    this.cone.show = true;
+  }
+
+  private ensureCone() {
+    if (this.cone) return;
+    // apex (radius 0) at +z = the satellite, unit base at -z = the ground; scaled by modelMatrix
+    this.cone = this.viewer.scene.primitives.add(
+      new Primitive({
+        geometryInstances: new GeometryInstance({
+          geometry: new CylinderGeometry({ length: 1, topRadius: 0, bottomRadius: 1, slices: 40, vertexFormat: PerInstanceColorAppearance.FLAT_VERTEX_FORMAT }),
+          attributes: { color: ColorGeometryInstanceAttribute.fromColor(Color.fromCssColorString('#9be7ff').withAlpha(0.22)) },
+        }),
+        appearance: new PerInstanceColorAppearance({ flat: true, translucent: true }),
+        asynchronous: false,
+        show: false,
+      }),
+    ) as Primitive;
+  }
+
+  /** Approximate imaging strip: next half orbit of ground track, buffered by the class swath. */
+  private drawStrip(track: Cartesian3[]) {
+    if (this.strip) {
+      this.viewer.scene.primitives.remove(this.strip);
+      this.strip = undefined;
+    }
+    const sw = this.selSwath;
+    if (!sw || track.length < 4) return;
+    const half = track.slice(0, Math.ceil(track.length / 2));
+    try {
+      this.strip = this.viewer.scene.primitives.add(
+        new Primitive({
+          geometryInstances: new GeometryInstance({
+            geometry: new CorridorGeometry({ positions: half, width: sw.km * 1000, height: 1500, vertexFormat: PerInstanceColorAppearance.FLAT_VERTEX_FORMAT }),
+            attributes: { color: ColorGeometryInstanceAttribute.fromColor(Color.fromCssColorString('#ffd166').withAlpha(0.16)) },
+          }),
+          appearance: new PerInstanceColorAppearance({ flat: true, translucent: true }),
+          asynchronous: true,
+        }),
+      ) as Primitive;
+    } catch (e) {
+      console.warn('[sat] swath strip', e);
+    }
+  }
+
   private clearSel() {
+    this.selSwath = null;
+    if (this.strip) {
+      this.viewer.scene.primitives.remove(this.strip);
+      this.strip = undefined;
+    }
+    if (this.cone) this.cone.show = false;
     this.selIdx = -1;
     this.selRec = null;
     if (this.orbitLine) this.orbitLine.show = this.trackLine!.show = this.footLine!.show = false;
@@ -402,6 +494,9 @@ class SatEngine {
     this.selIdx = idx;
     this.selRec = json2satrec(m.omm);
     this.prims[idx].pixelSize = 9;
+    this.selSwath = swathFor(m.name, m.cat);
+    if (this.selSwath) this.ensureCone();
+    this.coneAt = 0;
     this.drawOrbit();
     const o = m.omm as any;
     const n = (o.MEAN_MOTION * 2 * Math.PI) / 86400;
@@ -443,6 +538,7 @@ class SatEngine {
         ['PERIOD', `${period.toFixed(1)} min`],
         ['APOGEE / PERIGEE', `${apo.toFixed(0)} / ${peri.toFixed(0)} km`],
         ['ECCENTRICITY', o.ECCENTRICITY.toFixed(5)],
+        ...((this.selSwath ? [['IMAGING SWATH', `≈ ${this.selSwath.km.toLocaleString()} km · ${this.selSwath.label} (approx.)`]] : []) as [string, string][]),
       ],
       live() {
         const s = self.state(idx);

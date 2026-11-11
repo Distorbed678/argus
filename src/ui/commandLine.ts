@@ -28,6 +28,7 @@ const HELP: [string, string][] = [
   ['aoi add <name> <lat,lon> <km>', 'arm a circular watch area (alerts in the log)'],
   ['aoi draw [circle|poly]', 'draw a watch area on the globe'],
   ['aoi list | aoi del <name> | aoi fly <name>', 'manage watch areas'],
+  ['revisit [lat,lon | aoi] [minEl]', 'earth-obs + military satellite passes over a point, next 24 h'],
   ['pin | unpin', 'add / remove the selected target to the watchlist'],
   ['intel [aoi|watch]', 'open the intel panel'],
   ['layer <name> on|off', 'toggle a feed (layer flights on, layer quakes off)'],
@@ -243,6 +244,33 @@ export async function run(line: string, print: (h: string) => void): Promise<boo
       const all = A.aois();
       if (!all.length) print('<span class="h">no watch areas — aoi add &lt;name&gt; &lt;lat,lon&gt; &lt;km&gt; or aoi draw</span>');
       for (const a of all) print(`  <b>${esc(a.name.padEnd(16))}</b> ${esc(A.describeShape(a.shape))}`);
+      return false;
+    }
+    case 'revisit': {
+      const R = await import('../spy/revisit');
+      const { findAoi } = await import('../spy/aoi');
+      const { shapeCenter } = await import('../core/geo');
+      const mEl = arg.match(/\s(\d{1,2})$/);
+      const minEl = mEl ? +mEl[1] : 30;
+      const q = (mEl ? arg.slice(0, mEl.index) : arg).trim();
+      let lat: number, lon: number, label: string;
+      const ll = q.match(/^(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)$/);
+      const aoi = q && !ll ? findAoi(q) : undefined;
+      if (ll) ((lat = +ll[1]), (lon = +ll[2]), (label = fmtLL(lat, lon)));
+      else if (aoi) {
+        const c = shapeCenter(aoi.shape);
+        ((lat = c.lat), (lon = c.lon), (label = `AOI ${aoi.name}`));
+      } else if (q) return err(`"${esc(q)}" is not lat,lon or a watch area name`), false;
+      else {
+        const o = getObserverSync();
+        ((lat = o.lat), (lon = o.lon), (label = `observer ${fmtLL(lat, lon)}`));
+      }
+      print(`<span class="h">screening earth-obs + military catalog over ${esc(label)} (≥${minEl}°, 24 h)…</span>`);
+      const res = await R.computeRevisit(lat, lon, 24, minEl);
+      if (typeof res === 'string') return err(res), false;
+      const s = R.summarize(res.rows, 24);
+      print(`<span class="h"><b>${s.passes}</b> passes by <b>${s.sats}</b> satellites${s.geo ? ` + ${s.geo} GEO` : ''} · median gap ${Number.isFinite(s.median) ? (s.median * 60).toFixed(0) + ' min' : '—'}. first 25:</span>`);
+      for (const l of R.revisitLines(res.rows)) print(esc(l));
       return false;
     }
     case 'pin':

@@ -24,7 +24,9 @@ import { openAR } from './ar/skyview';
 import { initAoi } from './spy/aoi';
 import { initAlerts } from './spy/alerts';
 import { initWatchlist } from './spy/watchlist';
-import { initIntel } from './ui/intel';
+import { initIntel, registerAoiAction } from './ui/intel';
+import { aois } from './spy/aoi';
+import { shapeCenter } from './core/geo';
 
 applyFxClass();
 document.body.dataset.mode = settings.mode;
@@ -48,6 +50,15 @@ initAoi(viewer);
 initAlerts();
 initWatchlist(viewer);
 initIntel();
+registerAoiAction({
+  label: 'REVISIT',
+  run: (id) => {
+    const a = aois().find((x) => x.id === id);
+    if (!a) return;
+    const c = shapeCenter(a.shape);
+    void import('./spy/revisit').then((m) => m.openRevisit(c.lat, c.lon, `AOI ${a.name}`));
+  },
+});
 
 document.getElementById('btn-settings')!.onclick = openSettings;
 document.getElementById('btn-ar')!.onclick = () => openAR();
