@@ -1,4 +1,5 @@
-// Public traffic cameras (bundled Caltrans + NYC DOT list) + Windy webcams for the view (with key).
+// Public traffic cameras (bundled snapshot: Caltrans, NYC DOT and 13 keyless '511' road agencies)
+// + Windy webcams for the view (with key).
 import { NearFarScalar } from 'cesium';
 import { getData } from '../data/fetcher';
 import { settings } from '../core/store';
@@ -20,6 +21,17 @@ export interface Cam {
 }
 
 let bundled: Cam[] | null = null;
+
+/**
+ * cameras.json v2 (written by scripts/fetch-static-data.mjs): { v: 2, s: [{ n: source, h: url prefix }],
+ * c: [[id, name, lat, lon, sourceIdx, urlSuffix, refreshS, stream?]] }. Plain Cam[] is still accepted.
+ */
+export function expandCameras(raw: any): Cam[] {
+  if (Array.isArray(raw)) return raw;
+  if (raw?.v !== 2) return [];
+  const src: { n: string; h: string }[] = raw.s;
+  return (raw.c as any[]).map((r) => ({ id: r[0], name: r[1], lat: r[2], lon: r[3], src: src[r[4]].n, img: src[r[4]].h + r[5], refresh: r[6] || undefined, stream: r[7] || undefined }));
+}
 
 async function windy(): Promise<Cam[]> {
   const key = settings.keys.windy;
@@ -49,10 +61,10 @@ async function windy(): Promise<Cam[]> {
 
 export default pointLayer<Cam>({
   interval: 5 * 60_000,
-  detail: 'Caltrans CCTV + NYC DOT (bundled list)',
+  detail: 'Caltrans · NYC DOT · 13 state/provincial 511 agencies (bundled list)',
   scale: new NearFarScalar(2e3, 1.3, 8e6, 0.45),
   load: async () => {
-    if (!bundled) bundled = (await getData<Cam[]>('./data/cameras.json', { ttl: 86400_000 })).data;
+    if (!bundled) bundled = expandCameras((await getData<any>('./data/cameras.json', { ttl: 86400_000 })).data);
     const w = await windy();
     return { data: [...bundled, ...w], fromCache: false };
   },

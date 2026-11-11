@@ -22,8 +22,28 @@ let viewer: Viewer;
 let baseLayer: ImageryLayer | undefined;
 let labelLayer: ImageryLayer | undefined;
 
+/**
+ * "History" base: NASA GIBS MODIS Terra daily true colour for the timeline's date (UTC day).
+ * Today's mosaic is still filling in, so live time shows yesterday; Terra imagery starts 2000-02-24.
+ */
+export function historyDate(): string {
+  const sim = JulianDate.toDate(viewer.clock.currentTime).getTime();
+  const yesterday = Date.now() - 86400_000;
+  const t = Math.max(Date.UTC(2000, 1, 24), Math.min(sim, yesterday));
+  return new Date(t).toISOString().slice(0, 10);
+}
+let historyShown = '';
+
 function baseProvider(kind: string): ImageryProvider {
   switch (kind) {
+    case 'history': {
+      historyShown = historyDate();
+      return new UrlTemplateImageryProvider({
+        url: `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/${historyShown}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`,
+        maximumLevel: 9,
+        credit: new Credit(`NASA GIBS / MODIS Terra true colour ${historyShown}`),
+      });
+    }
     case 'dark':
       return new UrlTemplateImageryProvider({
         url: 'https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
@@ -155,6 +175,14 @@ export function createViewer(container: HTMLElement, credits: HTMLElement): View
 
   setBase(settings.base);
   setLabels(settings.labels);
+  // the history base follows the timeline: swap imagery when the sim date crosses a UTC day
+  window.setInterval(() => {
+    if (settings.base !== 'history' || document.hidden) return;
+    const d = historyDate();
+    if (d === historyShown) return;
+    setBase('history');
+    log('IMAGERY', `history base → MODIS Terra ${d}`, 'info');
+  }, 2000);
   applyQuality();
 
   // Start far out in space for the fly-in.

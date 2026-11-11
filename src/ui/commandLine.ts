@@ -8,7 +8,7 @@ import { goLive, setRate, setSimTime, simNow } from '../core/clock';
 import { locate, getObserverSync } from '../core/observer';
 import { getData } from '../data/fetcher';
 import { settings, saveSettings, type Settings } from '../core/store';
-import { setBase } from '../core/viewer';
+import { setBase, historyDate } from '../core/viewer';
 import { log } from '../core/bus';
 import { openSettings, applyFxClass } from './settings';
 import { openAR } from '../ar/skyview';
@@ -35,7 +35,7 @@ const HELP: [string, string][] = [
   ['layer <name> on|off', 'toggle a feed (layer flights on, layer quakes off)'],
   ['layers', 'list all feeds and their status'],
   ['mode <id>', `imaging mode: ${MODES.map((m) => m.id).join(' | ')}`],
-  ['base <sat|dark|truecolor|osm>', 'switch base imagery'],
+  ['base <sat|dark|truecolor|osm|history>', 'switch base imagery (history = NASA daily imagery for the timeline date; try time -30d)'],
   ['time <+/-Nh|m> | rate <x> | live', 'time travel / compression / resync'],
   ['release', 'release lock / exit POV'],
   ['fx on|off', 'toggle visual effects'],
@@ -325,10 +325,10 @@ export async function run(line: string, print: (h: string) => void): Promise<boo
     }
     case 'base': {
       const b = arg.toLowerCase() as Settings['base'];
-      if (!['sat', 'dark', 'truecolor', 'osm'].includes(b)) return err('base sat|dark|truecolor|osm'), false;
+      if (!['sat', 'dark', 'truecolor', 'osm', 'history'].includes(b)) return err('base sat|dark|truecolor|osm|history'), false;
       saveSettings({ base: b });
       setBase(b);
-      ok(`base imagery → ${b}`);
+      ok(b === 'history' ? `base imagery → NASA MODIS Terra ${historyDate()} (follows the timeline)` : `base imagery → ${b}`);
       return false;
     }
     case 'time': {

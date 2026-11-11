@@ -24,6 +24,7 @@ export function openSettings() {
           <option value="dark">Tactical dark (Esri dark gray)</option>
           <option value="truecolor">NASA VIIRS true colour (daily)</option>
           <option value="osm">OpenStreetMap (tinted)</option>
+          <option value="history">History: NASA MODIS daily (follows timeline date)</option>
         </select></div>
       <label class="toggle"><input type="checkbox" id="s-labels"> Place-name labels overlay</label>
       <label class="toggle"><input type="checkbox" id="s-fx"> Reduce effects (no rain, glitch, scanlines, CRT)</label>

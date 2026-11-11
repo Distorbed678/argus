@@ -18,6 +18,7 @@ export const PROXY_ALLOW = [
   'api.ioda.inetintel.cc.gatech.edu',
   'tfr.faa.gov',
   'www.tsunami.gov',
+  'network.satnogs.org',
 ];
 
 const handler: Connect.NextHandleFunction = async (req, res, next) => {

@@ -18,6 +18,7 @@ const ALLOW = new Set([
   'api.ioda.inetintel.cc.gatech.edu',
   'tfr.faa.gov',
   'www.tsunami.gov',
+  'network.satnogs.org',
 ]);
 
 const CORS = {

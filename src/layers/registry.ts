@@ -83,9 +83,10 @@ export const LAYERS: LayerMeta[] = [
   { id: 'gdelt', name: 'News events', category: 'SIGNALS', source: 'GDELT GKG GeoJSON (via proxy, best effort)', load: () => import('./signals/gdelt') },
   { id: 'ioda', name: 'Internet outages', category: 'SIGNALS', source: 'IODA (Georgia Tech)', load: () => import('./signals/ioda') },
   { id: 'radio', name: 'Live radio stations', category: 'SIGNALS', source: 'radio-browser.info', load: () => import('./signals/radio') },
+  { id: 'satnogs', name: 'SatNOGS ground stations', category: 'SIGNALS', source: 'SatNOGS Network (stations snapshot + live obs via proxy)', load: () => import('./signals/satnogs') },
   { id: 'wiki', name: 'Live Wikipedia edits', category: 'SIGNALS', source: 'Wikimedia EventStreams', load: () => import('./signals/wikiEdits') },
   // HUMAN
-  { id: 'cameras', name: 'Public traffic cameras', category: 'HUMAN', source: 'Caltrans + NYC DOT (+ Windy key)', needsKey: 'windy', keyOptional: true, load: () => import('./cameras') },
+  { id: 'cameras', name: 'Public traffic cameras', category: 'HUMAN', source: 'Caltrans, NYC DOT, 13× 511 agencies (+ Windy key)', needsKey: 'windy', keyOptional: true, load: () => import('./cameras') },
   gibs('nightlights', 'Night lights (full)', 'HUMAN', 'VIIRS_Black_Marble', 'GoogleMapsCompatible_Level8', 'png', { alpha: 0.9 }),
   gibs('population', 'Population density', 'HUMAN', 'GPW_Population_Density_2020', 'GoogleMapsCompatible_Level7', 'png', { alpha: 0.65 }),
 ];

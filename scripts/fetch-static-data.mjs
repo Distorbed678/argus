@@ -33,6 +33,89 @@ async function cables() {
   console.log(`cables: ${out.cables.length} cables, ${landings.length} landing points`);
 }
 
+// Keyless "511" road-agency sites (all on the same platform): /List/GetData/Cameras pages through
+// every camera site with names, coordinates and still-image URLs (/map/Cctv/<imageId>).
+const AGENCIES = [
+  ['511on.ca', 'Ontario 511', 'on'],
+  ['511.alaska.gov', 'Alaska 511', 'ak'],
+  ['511wi.gov', 'Wisconsin 511', 'wi'],
+  ['511ga.org', 'Georgia 511', 'ga'],
+  ['az511.gov', 'Arizona 511', 'az'],
+  ['511.idaho.gov', 'Idaho 511', 'id'],
+  ['udottraffic.utah.gov', 'UDOT Traffic (Utah)', 'ut'],
+  ['nvroads.com', 'NV Roads (Nevada)', 'nv'],
+  ['511la.org', 'Louisiana 511', 'la'],
+  ['511pa.com', '511PA (Pennsylvania)', 'pa'],
+  ['newengland511.org', 'New England 511', 'ne'],
+  ['ctroads.org', 'CTroads (Connecticut)', 'ct'],
+  ['fl511.com', 'FL511 (Florida)', 'fl'],
+];
+
+async function agency([host, name, code]) {
+  const out = [];
+  const PAGE = 100; // the platform caps a page at 100 rows
+  for (let start = 0, total = Infinity, fails = 0; start < total && start < 20000; start += PAGE) {
+    const q = encodeURIComponent(JSON.stringify({ columns: [{ data: null, name: '' }, { name: 'sortOrder', s: true }], order: [{ column: 1, dir: 'asc' }], start, length: PAGE, search: { value: '' } }));
+    let j;
+    try {
+      j = await json(`https://${host}/List/GetData/Cameras?query=${q}&lang=en`);
+    } catch (e) {
+      // one bad page shouldn't lose the whole agency
+      if (++fails > 3) break;
+      continue;
+    }
+    total = j.recordsTotal ?? 0;
+    if (!j.data?.length) break;
+    for (const site of j.data) {
+      const wkt = site.latLng?.geography?.wellKnownText ?? '';
+      const m = wkt.match(/POINT \((-?[\d.]+) (-?[\d.]+)\)/);
+      if (!m) continue;
+      const img = (site.images ?? []).find((i) => !i.disabled && !i.blocked && i.imageUrl);
+      if (!img) continue;
+      const label = [site.location, img.description && img.description !== 'N/A' && img.description !== site.location ? img.description : ''].filter(Boolean).join(' · ');
+      out.push({
+        id: `${code}${img.id}`,
+        name: label || site.roadway || `${name} camera ${site.id}`,
+        lat: Number(m[2]),
+        lon: Number(m[1]),
+        img: `https://${host}${img.imageUrl}`,
+        src: name,
+        refresh: img.refreshRateMs ? Math.round(img.refreshRateMs / 1000) : 60,
+      });
+    }
+  }
+  // drop the agency if its stills can't be hot-linked
+  if (out.length) {
+    const r = await fetch(out[0].img, { headers: UA, signal: AbortSignal.timeout(20000) }).catch(() => null);
+    if (!r?.ok || !(r.headers.get('content-type') ?? '').startsWith('image/')) throw new Error(`${host}: stills not public (${r?.status})`);
+  }
+  return out;
+}
+
+/** Compact v2 format: per-source URL prefixes + array rows (see src/layers/cameras.ts). */
+function compact(cams) {
+  const srcs = [];
+  const idx = new Map();
+  const groups = new Map();
+  for (const c of cams) {
+    if (!idx.has(c.src)) (idx.set(c.src, srcs.length), srcs.push({ n: c.src, h: '' }), groups.set(c.src, []));
+    groups.get(c.src).push(c.img);
+  }
+  for (const s of srcs) {
+    const urls = groups.get(s.n);
+    let p = urls[0];
+    for (const u of urls) while (!u.startsWith(p)) p = p.slice(0, -1);
+    s.h = p;
+  }
+  const rows = cams.map((c) => {
+    const s = idx.get(c.src);
+    const row = [c.id, c.name, round(c.lat), round(c.lon), s, c.img.slice(srcs[s].h.length), c.refresh ?? 0];
+    if (c.stream) row.push(c.stream);
+    return row;
+  });
+  return { v: 2, generated: new Date().toISOString(), s: srcs, c: rows };
+}
+
 async function cameras() {
   const cams = [];
   const districts = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
@@ -66,12 +149,24 @@ async function cameras() {
     const ny = await json('https://webcams.nyctmc.org/api/cameras');
     for (const c of ny) {
       if (c.isOnline !== 'true' && c.isOnline !== true) continue;
-      cams.push({ id: `nyc-${c.id}`, name: c.name, lat: c.latitude, lon: c.longitude, img: c.imageUrl, src: `NYC DOT ${c.area ?? ''}`.trim(), refresh: 2 });
+      cams.push({ id: `nyc-${c.id}`, name: c.name, lat: c.latitude, lon: c.longitude, img: c.imageUrl, src: 'NYC DOT', refresh: 2 });
     }
   } catch (e) {
     console.warn('nyc', e.message);
   }
-  await writeFile(new URL('cameras.json', OUT), JSON.stringify(cams));
+  // a few agencies at a time, politely
+  for (let i = 0; i < AGENCIES.length; i += 4) {
+    const res = await Promise.allSettled(AGENCIES.slice(i, i + 4).map(agency));
+    res.forEach((r, k) => {
+      const [host] = AGENCIES[i + k];
+      if (r.status === 'fulfilled') {
+        cams.push(...r.value);
+        console.log(`  ${host}: ${r.value.length}`);
+      } else console.warn(`  ${host}: FAILED ${r.reason?.message ?? r.reason}`);
+    });
+  }
+  if (cams.length < 1000) throw new Error(`camera list too small (${cams.length}) — keeping existing file`);
+  await writeFile(new URL('cameras.json', OUT), JSON.stringify(compact(cams)));
   console.log(`cameras: ${cams.length}`);
 }
 
@@ -138,9 +233,21 @@ async function volcanoes() {
   console.log(`volcanoes: ${rows.length}`);
 }
 
+// SatNOGS ground stations that are online or testing (the API has no browser CORS).
+async function satnogs() {
+  const j = await json('https://network.satnogs.org/api/stations/?format=json');
+  // rows: [id, name, lat, lon, alt m, status (O=online, T=testing), observations, success %, last seen ISO, bands]
+  const rows = j
+    .filter((s) => s.status !== 'Offline' && Number.isFinite(s.lat) && Number.isFinite(s.lng))
+    .map((s) => [s.id, s.name, round(s.lat), round(s.lng), s.altitude ?? 0, s.status === 'Online' ? 'O' : 'T', s.observations ?? 0, s.success_rate ?? null, s.last_seen ?? null, [...new Set((s.antenna ?? []).map((a) => a.band))].join('/')]);
+  if (rows.length < 50) throw new Error(`satnogs list too small (${rows.length}) — keeping existing file`);
+  await writeFile(new URL('satnogs-stations.json', OUT), JSON.stringify({ generated: new Date().toISOString(), s: rows }));
+  console.log(`satnogs stations: ${rows.length}`);
+}
+
 await mkdir(OUT, { recursive: true });
 // optional filter: `node scripts/fetch-static-data.mjs volcanoes cameras`
-const JOBS = { cables, cameras, centroids, satellites, volcanoes };
+const JOBS = { cables, cameras, centroids, satellites, volcanoes, satnogs };
 const only = process.argv.slice(2).filter((a) => a in JOBS);
 const results = await Promise.allSettled((only.length ? only : Object.keys(JOBS)).map((k) => JOBS[k]()));
 for (const r of results) if (r.status === 'rejected') console.error('FAILED:', r.reason?.message ?? r.reason);

@@ -4,7 +4,7 @@ import { bus } from './bus';
 export interface Settings {
   reduceFx: boolean;
   highQuality: boolean;
-  base: 'sat' | 'dark' | 'truecolor' | 'osm';
+  base: 'sat' | 'dark' | 'truecolor' | 'osm' | 'history';
   mode: string;
   layers: string[];
   proxyUrl: string;
