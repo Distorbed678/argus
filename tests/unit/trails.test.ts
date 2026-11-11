@@ -20,15 +20,17 @@ describe('TrailStore', () => {
     expect(s.points('a')[0].t).toBe(20);
   });
 
-  it('evicts the least recently updated target over the cap', () => {
-    const s = new TrailStore(10, 2, 0);
-    s.push('a', 0, 0, 0, 1);
-    s.push('b', 0, 0, 0, 1);
-    s.push('a', 1, 0, 0, 2); // a is now most recent
-    s.push('c', 0, 0, 0, 1);
-    expect(s.size).toBe(2);
-    expect(s.points('b')).toHaveLength(0);
-    expect(s.points('a')).toHaveLength(2);
+  it('evicts the least recently updated targets over the cap (batched)', () => {
+    const s = new TrailStore(10, 10, 0); // cap 10, evicts once it exceeds 11
+    for (let i = 0; i < 11; i++) s.push(`t${i}`, 0, 0, 0, 1);
+    s.push('t0', 1, 0, 0, 2); // t0 is now most recent
+    expect(s.size).toBe(11);
+    s.push('new', 0, 0, 0, 1); // 12 > 11 → back down to 10
+    expect(s.size).toBe(10);
+    expect(s.points('t1')).toHaveLength(0);
+    expect(s.points('t2')).toHaveLength(0);
+    expect(s.points('t0')).toHaveLength(2);
+    expect(s.points('new')).toHaveLength(1);
   });
 
   it('builds densified cartesian positions with a live head', () => {

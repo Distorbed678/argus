@@ -8,11 +8,14 @@ import { distKm, interpolateGC } from '../core/geo';
 export class TrailStore {
   /** flat [lat, lon, altM, t, …] per key, oldest first */
   private m = new Map<string, number[]>();
+  private slack: number;
   constructor(
     private maxPts = 60,
     private maxTargets = 5000,
     private minMoveKm = 0.05,
-  ) {}
+  ) {
+    this.slack = Math.max(1, Math.round(maxTargets * 0.1));
+  }
 
   push(key: string, lat: number, lon: number, alt: number, t: number) {
     let a = this.m.get(key);
@@ -28,7 +31,15 @@ export class TrailStore {
     a.push(lat, lon, alt, t);
     if (a.length > this.maxPts * 4) a.splice(0, a.length - this.maxPts * 4);
     this.m.set(key, a);
-    if (this.m.size > this.maxTargets) this.m.delete(this.m.keys().next().value!);
+    // evict the least recently updated in batches: deleting one-at-a-time from the front of a Map
+    // leaves holes that every later keys().next() has to walk over
+    if (this.m.size > this.maxTargets + this.slack) {
+      let n = this.m.size - this.maxTargets;
+      for (const k of this.m.keys()) {
+        this.m.delete(k);
+        if (--n <= 0) break;
+      }
+    }
   }
 
   points(key: string): { lat: number; lon: number; alt: number; t: number }[] {

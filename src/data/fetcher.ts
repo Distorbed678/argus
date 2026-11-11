@@ -152,5 +152,6 @@ export class Poller {
 export function describeError(e: unknown): { status: 'proxy' | 'offline' | 'error'; detail: string } {
   if (e instanceof ProxyMissingError) return { status: 'proxy', detail: e.message };
   if (e instanceof TypeError) return { status: 'offline', detail: 'network/CORS blocked' };
+  if ((e as Error)?.name === 'TimeoutError' || (e as Error)?.name === 'AbortError') return { status: 'offline', detail: 'source timed out' };
   return { status: 'error', detail: String((e as Error)?.message ?? e) };
 }
