@@ -4,6 +4,7 @@ import { pickById } from '../layers/manager';
 import { select } from '../core/target';
 import { selectGround } from '../layers/weather/pointWeather';
 import { isMobile } from '../core/store';
+import { closeSheets } from './mobile';
 import type { PickId } from '../layers/Layer';
 
 function idOf(picked: any): PickId | undefined {
@@ -19,13 +20,18 @@ export function initPicker(viewer: Viewer) {
   const h = new ScreenSpaceEventHandler(viewer.scene.canvas);
   const canvas = viewer.scene.canvas;
 
+  let clickSeq = 0;
   h.setInputAction(async (e: { position: Cartesian2 }) => {
+    // on mobile, a tap on the map with a sheet open just dismisses the sheet
+    if (closeSheets()) return;
+    const seq = ++clickSeq;
     // drillPick lets us skip non-ARGUS primitives (e.g. orbit lines) under the cursor
     const picks = viewer.scene.drillPick(e.position, 4, isMobile ? 18 : 8, isMobile ? 18 : 8);
     for (const p of picks) {
       const id = idOf(p);
       if (!id) continue;
       const d = await pickById(id.layer, id.key);
+      if (seq !== clickSeq) return; // a newer click won while this pick was loading
       if (d) {
         select(d);
         return;

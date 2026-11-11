@@ -366,7 +366,11 @@ class SatEngine {
     this.selIdx = -1;
     this.selRec = null;
     if (this.orbitLine) this.orbitLine.show = this.trackLine!.show = this.footLine!.show = false;
-    for (const p of this.prims) if (p && p.pixelSize > 6) p.pixelSize = 2.5;
+    // restore the highlighted point to its category's normal size (stations/military are larger)
+    for (let i = 0; i < this.prims.length; i++) {
+      const p = this.prims[i];
+      if (p && p.pixelSize > 6) p.pixelSize = this.meta[i].cat === 'stations' || this.meta[i].cat === 'military' ? 5 : 2.5;
+    }
     this.viewer.scene.requestRender();
   }
 
@@ -471,8 +475,9 @@ class SatEngine {
     log('POV', `optical feed slaved to ${this.meta[idx].name}`, 'ok');
   }
 
-  find(q: string): Dossier | undefined {
-    if (!this.meta.length) return;
+  /** Side-effect-free lookup (no selection / orbit drawing). */
+  findIndex(q: string): number {
+    if (!this.meta.length) return -1;
     const s = q.trim().toUpperCase();
     const num = Number(s);
     let idx = -1;
@@ -482,6 +487,11 @@ class SatEngine {
     if (idx < 0) idx = this.meta.findIndex((m) => m.name === s);
     if (idx < 0) idx = this.meta.findIndex((m) => m.name.startsWith(s));
     if (idx < 0) idx = this.meta.findIndex((m) => m.name.includes(s));
+    return idx;
+  }
+
+  find(q: string): Dossier | undefined {
+    const idx = this.findIndex(q);
     if (idx < 0) return;
     // make sure its category is visible
     if (!this.visible.has(this.meta[idx].cat)) void this.setVisible(this.meta[idx].cat, true);

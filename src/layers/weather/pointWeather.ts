@@ -3,7 +3,7 @@ import { Cartesian3 } from 'cesium';
 import { getData } from '../../data/fetcher';
 import { fmtLL, esc } from '../../core/fmt';
 import { setObserver } from '../../core/observer';
-import { select } from '../../core/target';
+import { select, selected } from '../../core/target';
 import type { Dossier } from '../Layer';
 
 const WMO: Record<number, string> = {
@@ -55,6 +55,7 @@ export function groundDossier(lat: number, lon: number): Dossier {
   getData<any>(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=10&lat=${lat}&lon=${lon}`, { ttl: 3600_000 })
     .then(({ data }) => {
       d.subtitle = data.display_name ?? (data.error ? 'open water / unclaimed' : '—');
+      if (selected() !== d) return; // user moved on; don't write into another dossier
       const sub = document.querySelector('#dossier .d-sub');
       if (sub) sub.innerHTML = esc(d.subtitle);
       else {

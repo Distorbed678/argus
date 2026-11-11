@@ -1,6 +1,7 @@
 import type { Viewer } from 'cesium';
 import { bus, log } from '../core/bus';
 import { settings, setLayerPersisted } from '../core/store';
+import { selected, select } from '../core/target';
 import type { Dossier, LayerInstance, LayerMeta, LayerStatus } from './Layer';
 import { LAYERS } from './registry';
 
@@ -38,9 +39,14 @@ export function layerState(id: string) {
   return states.get(id);
 }
 
+let proxyHinted = false;
 function setStatus(id: string, status: LayerStatus, detail?: string, count?: number) {
   const s = states.get(id);
   if (!s) return;
+  if (status === 'proxy' && !proxyHinted) {
+    proxyHinted = true;
+    log('RELAY', `${s.meta.name} needs a CORS relay on static hosting — deploy proxy/cloudflare-worker.js and set it in ⚙ Settings`, 'warn');
+  }
   s.status = status;
   s.detail = detail;
   if (count !== undefined) s.count = count;
@@ -55,6 +61,7 @@ export async function toggle(id: string, on: boolean, persist = true) {
   if (persist) setLayerPersisted(id, on);
   bus.emit('layer-toggle', { id, on });
   if (!on) {
+    if (selected()?.layer === id) select(null);
     try {
       s.inst?.disable();
     } catch (e) {

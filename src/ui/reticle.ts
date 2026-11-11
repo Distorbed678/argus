@@ -39,5 +39,6 @@ export function initReticle(viewer: Viewer) {
     el.style.opacity = '1';
     el.style.transform = `translate(${w.x}px, ${w.y}px)`;
     el.classList.toggle('following', isFollowing());
+    el.classList.toggle('flip', w.x > innerWidth - 300);
   });
 }

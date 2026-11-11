@@ -57,10 +57,13 @@ export function openSettings() {
   $<HTMLInputElement>('s-labels').checked = settings.labels;
   $<HTMLInputElement>('s-fx').checked = settings.reduceFx;
   $<HTMLInputElement>('s-hq').checked = settings.highQuality;
+  const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close();
   const close = () => {
     root.hidden = true;
     root.innerHTML = '';
+    removeEventListener('keydown', onKey);
   };
+  addEventListener('keydown', onKey);
   root.querySelector<HTMLElement>('.x')!.onclick = close;
   root.onclick = (e) => e.target === root && close();
 

@@ -90,6 +90,7 @@ body.reduce-fx * { animation-duration: 0s !important; transition: none !importan
   animation: lockin 0.5s ease-out;
 }
 #reticle .ticks { position: absolute; left: -40px; top: -40px; width: 80px; height: 80px; border: 1px dashed rgba(255, 179, 71, 0.5); border-radius: 50%; animation: spin 6s linear infinite; }
+#reticle.flip .tag { left: auto; right: 32px; }
 #reticle .tag { position: absolute; left: 32px; top: -30px; white-space: nowrap; color: var(--amber); font-size: 11px; text-shadow: 0 0 6px #000, 0 0 2px #000; letter-spacing: 1px; }
 #reticle.following .ring { border-color: var(--red); box-shadow: 0 0 12px rgba(255, 59, 92, 0.7); }
 #reticle.following .tag { color: var(--red); }
@@ -158,12 +159,13 @@ body.reduce-fx * { animation-duration: 0s !important; transition: none !importan
 .cat.collapsed .cat-head::before { content: '▸'; }
 .cat.collapsed .rows { display: none; }
 .cat-head .n { margin-left: auto; color: var(--cyan); }
-.row { display: grid; grid-template-columns: 20px 1fr auto; align-items: center; gap: 6px; padding: 5px 10px 5px 12px; cursor: pointer; border-left: 2px solid transparent; }
+.row { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: center; gap: 6px; padding: 5px 10px 5px 12px; cursor: pointer; border-left: 2px solid transparent; }
 .row:hover { background: rgba(47, 128, 255, 0.08); border-left-color: var(--cyan); }
 .row.on { color: var(--ice); }
 .row:not(.on) { color: #7d9cbd; }
 .row .chk { width: 14px; height: 14px; border: 1px solid var(--line-strong); position: relative; }
 .row.on .chk::after { content: ''; position: absolute; inset: 2px; background: var(--cyan); box-shadow: var(--glow); }
+.row .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .row .meta { display: block; font-size: 10px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .row .st { font-size: 10px; letter-spacing: 1px; text-align: right; white-space: nowrap; }
 .st-live { color: var(--green); }
@@ -221,6 +223,7 @@ body.reduce-fx * { animation-duration: 0s !important; transition: none !importan
 #log-list .ok .m { color: var(--green); }
 @keyframes typein { from { opacity: 0; transform: translateX(-6px); } }
 
+#hud-wx .hud-title { cursor: pointer; user-select: none; }
 #hud-wx { right: 10px; bottom: calc(76px + var(--safe-b)); width: 180px; padding: 8px 10px; z-index: 7; }
 #hud-wx .kv { font-size: 11px; }
 
@@ -246,7 +249,7 @@ body.reduce-fx * { animation-duration: 0s !important; transition: none !importan
 .tl-track { flex: 1; position: relative; min-width: 80px; }
 .tl-marks { display: flex; justify-content: space-between; font-size: 9px; color: var(--dim); margin-top: 2px; }
 .tl-time { font-size: 12px; color: var(--ice); white-space: nowrap; min-width: 150px; text-align: right; }
-input[type='range'] { -webkit-appearance: none; appearance: none; width: 100%; height: 18px; background: transparent; }
+input[type='range'] { -webkit-appearance: none; appearance: none; width: 100%; margin: 0; display: block; height: 18px; background: transparent; }
 input[type='range']::-webkit-slider-runnable-track { height: 3px; background: linear-gradient(90deg, var(--line), var(--cyan), var(--line)); }
 input[type='range']::-moz-range-track { height: 3px; background: linear-gradient(90deg, var(--line), var(--cyan), var(--line)); }
 input[type='range']::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 18px; margin-top: -7.5px; background: var(--ice); box-shadow: var(--glow); border: 0; }
@@ -369,4 +372,40 @@ body[data-mode='flir'] { --cyan: #ffb347; --line-strong: rgba(255, 179, 71, 0.7)
   body.has-dossier #modes { display: none; }
   #dossier { max-height: calc(100vh - var(--top) - 250px); }
   body:not(.has-wx) #dossier { max-height: calc(100vh - var(--top) - 100px); }
+}
+
+/* ---------- audit fixes ---------- */
+/* 3. top bar: drop FPS / tracks before the action buttons can overflow */
+@media (max-width: 1000px) { .hide-md { display: none !important; } }
+/* 18. tall desktop screens have room for the mode panel under the dossier */
+@media (min-width: 861px) and (min-height: 900px) {
+  body.has-dossier #modes { display: block; }
+  body.has-dossier #dossier { max-height: calc(100vh - var(--top) - 470px); }
+}
+@media (max-width: 860px) {
+  /* 2. desktop restore buttons don't exist on mobile */
+  .restore-btn { display: none !important; }
+  /* 8. >=16px inputs stop iOS from zooming on focus */
+  #cmd-input, .filter, .field input, .field select { font-size: 16px; }
+  /* 6. comfortable touch targets */
+  .tl-rates { flex-wrap: wrap; }
+  .tl-rates button { min-height: 36px; min-width: 40px; font-size: 11px; }
+  #timeline .live { min-height: 36px; }
+  /* 5. space weather collapses to a one-line chip; tap to expand */
+  #hud-wx:not(.open) .kv ~ .kv { display: none; }
+  #hud-wx:not(.open) { width: auto; min-width: 118px; }
+  #hud-wx .hud-title::after { content: ' ▾'; }
+  #hud-wx.open .hud-title::after { content: ' ▴'; }
+  #hud-wx { transition: none; }
+  body.has-dossier #hud-wx, body.sheet-open #hud-wx { display: none; }
+}
+/* 4. landscape phones: sheets become a right-hand drawer so the globe stays visible */
+@media (max-width: 860px) and (orientation: landscape) and (max-height: 520px) {
+  #layers, #log, #modes, #timeline, #dossier {
+    left: auto !important; right: 0 !important; width: min(380px, 55vw) !important;
+    top: calc(var(--top) + env(safe-area-inset-top, 0px)) !important; bottom: calc(44px + var(--safe-b)) !important;
+    max-height: none !important; height: auto !important; border-right: 0; border-left: 1px solid var(--line);
+  }
+  #modes.sheet, #timeline.sheet { bottom: auto !important; }
+  #mobilebar button { height: 44px; }
 }

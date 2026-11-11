@@ -30,7 +30,8 @@ export function initHud(viewer: Viewer) {
     const f = (frames * 1000) / (t - lastFps);
     frames = 0;
     lastFps = t;
-    fps.textContent = f < 0.5 ? 'IDLE' : f.toFixed(0);
+    // requestRenderMode only draws on change, so a few frames/s means 'idle', not 'slow'
+    fps.textContent = f < 12 ? 'IDLE' : f.toFixed(0);
   }, 1000);
 
   const updateCam = () => {

@@ -180,12 +180,14 @@ export async function run(line: string, print: (h: string) => void): Promise<boo
       return true;
     }
     case 'passes': {
-      const d = await resolveSat(arg || 'ISS');
-      if (!d) return err('no such satellite'), false;
-      const obs = await locate();
       const { satEngine } = await import('../layers/satellites/engine');
-      const ps = await satEngine.passes(Number(d.key), obs.lat, obs.lon, obs.h, 72);
-      print(`<span class="h">passes of <b>${esc(d.title)}</b> over ${fmtLL(obs.lat, obs.lon)} (${obs.source}), next 72h:</span>`);
+      // look the satellite up without selecting it (no orbit drawing / dossier side effects)
+      const cur = selected();
+      const idx = arg ? satEngine.findIndex(arg) : cur?.layer === 'sat' ? Number(cur.key) : satEngine.findIndex('ISS');
+      if (idx < 0) return err(satEngine.meta.length ? 'no such satellite' : 'satellite feed not loaded'), false;
+      const obs = await locate();
+      const ps = await satEngine.passes(idx, obs.lat, obs.lon, obs.h, 72);
+      print(`<span class="h">passes of <b>${esc(satEngine.meta[idx].name)}</b> over ${fmtLL(obs.lat, obs.lon)} (${obs.source}), next 72h:</span>`);
       if (!ps.length) print('<span class="h">none above 5°</span>');
       for (const p of ps) print(`  ${utc(p.aos)}  dur ${dur((p.los - p.aos) / 1000).padEnd(8)} max ${p.maxEl.toFixed(0)}°`);
       return false;

@@ -58,6 +58,7 @@ export function select(d: Dossier | null) {
     bus.emit('select', null);
     return;
   }
+  if (current && current !== d && (pov || following)) release();
   current = d;
   bus.emit('select', d);
   viewer.scene.requestRender();
