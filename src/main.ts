@@ -26,6 +26,7 @@ import { initAlerts } from './spy/alerts';
 import { initWatchlist } from './spy/watchlist';
 import { initIntel, registerAoiAction } from './ui/intel';
 import { initTrails } from './spy/trails';
+import { initBoard } from './ui/board';
 import { initMeasure, toggleMeasure } from './spy/measure';
 import { aois } from './spy/aoi';
 import { shapeCenter } from './core/geo';
@@ -55,6 +56,7 @@ document.getElementById('btn-measure')!.onclick = () => toggleMeasure();
 initAlerts();
 initWatchlist(viewer);
 initIntel();
+initBoard(viewer);
 registerAoiAction({
   label: 'REVISIT',
   run: (id) => {

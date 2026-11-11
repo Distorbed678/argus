@@ -52,6 +52,7 @@ export function initDossier() {
     });
     pin.classList.toggle('pinned', isPinned(d));
     pin.title = 'Add to / remove from the watchlist';
+    mk('⇩ EXPORT', () => void import('../spy/export').then((m) => m.exportDossier(d))).title = 'Download the view + dossier as a PNG';
     mk('RELEASE', () => release()).classList.add('danger');
     updateLive();
   };
