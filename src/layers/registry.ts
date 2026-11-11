@@ -41,6 +41,7 @@ export const LAYERS: LayerMeta[] = [
   { id: 'sun-moon', name: 'Sub-solar / sub-lunar', category: 'SPACE', source: 'Cesium ephemeris', load: () => import('./sky/sunMoon') },
   { id: 'aurora', name: 'Aurora oval', category: 'SPACE', source: 'NOAA SWPC OVATION', load: () => import('./hazards/aurora') },
   { id: 'space-wx', name: 'Space weather (Kp, flares)', category: 'SPACE', source: 'NOAA SWPC', load: () => import('./hazards/spaceWeather') },
+  { id: 'reentry', name: 'Re-entries (decaying objects)', category: 'SPACE', source: 'CelesTrak DECAYING · drag estimate', note: 'Countdowns are a first-order drag-decay estimate, not official predictions', load: () => import('./sky/reentry') },
   { id: 'launches', name: 'Rocket launches', category: 'SPACE', source: 'The Space Devs Launch Library 2', load: () => import('./sky/launches') },
   // AIR
   { id: 'flights', name: 'Live flights', category: 'AIR', source: 'adsb.lol → adsb.fi → OpenSky (via proxy)', load: () => import('./flights') },
@@ -54,6 +55,8 @@ export const LAYERS: LayerMeta[] = [
   gibs('precip', 'Global precipitation (IMERG)', 'WEATHER', 'IMERG_Precipitation_Rate', 'GoogleMapsCompatible_Level6', 'png', { alpha: 0.8 }),
   gibs('sst', 'Sea surface temperature', 'WEATHER', 'GHRSST_L4_MUR_Sea_Surface_Temperature', 'GoogleMapsCompatible_Level7', 'png', { alpha: 0.7 }),
   gibs('aerosol', 'Smoke / aerosol index', 'WEATHER', 'OMPS_NOAA21_NadirMapper_AerosolIndex_380', 'GoogleMapsCompatible_Level6', 'png', { alpha: 0.7 }),
+  { id: 'storms', name: 'Tropical cyclones + cones', category: 'WEATHER', source: 'NOAA NHC / CPHC (Atlantic, E+C Pacific)', load: () => import('./sky/storms') },
+  { id: 'sondes', name: 'Weather balloons (radiosondes)', category: 'WEATHER', source: 'SondeHub amateur network', load: () => import('./sky/sondes') },
   { id: 'wind', name: 'Wind field (sampled)', category: 'WEATHER', source: 'Open-Meteo', load: () => import('./weather/wind') },
   // HAZARDS
   { id: 'quakes', name: 'Earthquakes (24h)', category: 'HAZARDS', source: 'USGS', load: () => import('./hazards/quakes') },

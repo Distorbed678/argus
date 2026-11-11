@@ -121,7 +121,10 @@ export function pointLayer<T>(o: PointLayerOpts<T>): LayerFactory {
       return {
         layer: ctx.id,
         key,
-        position: () => Cartesian3.fromDegrees(it.lon, it.lat, it.h ?? 0),
+        position: () => {
+          const c = itemPos.get(key) ?? it; // follows refreshes (moving objects)
+          return Cartesian3.fromDegrees(c.lon, c.lat, c.h ?? 0);
+        },
         ...d,
       };
     };
