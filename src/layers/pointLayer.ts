@@ -5,6 +5,7 @@ import {
   Cartesian3,
   Color,
   NearFarScalar,
+  BlendOption,
   VerticalOrigin,
   type Billboard,
   type PointPrimitive,
@@ -121,7 +122,7 @@ export function pointLayer<T>(o: PointLayerOpts<T>): LayerFactory {
 
     return {
       async enable() {
-        coll = ctx.viewer.scene.primitives.add(o.points ? new PointPrimitiveCollection() : new BillboardCollection());
+        coll = ctx.viewer.scene.primitives.add(o.points ? new PointPrimitiveCollection({ blendOption: BlendOption.OPAQUE }) : new BillboardCollection());
         first = true;
         o.onEnable?.(ctx);
         if (o.interval > 0) {

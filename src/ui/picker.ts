@@ -48,13 +48,16 @@ export function initPicker(viewer: Viewer) {
   }, ScreenSpaceEventType.LEFT_CLICK);
 
   if (!isMobile) {
-    let last = 0;
+    // pick only once the pointer rests: a pick re-renders every primitive into an offscreen
+    // buffer, so throttled picks while panning across 17k points were wasted GPU work
+    let timer: number | undefined;
+    const pos = new Cartesian2();
     h.setInputAction((e: { endPosition: Cartesian2 }) => {
-      const t = performance.now();
-      if (t - last < 120) return;
-      last = t;
-      const p = viewer.scene.pick(e.endPosition);
-      canvas.style.cursor = idOf(p) ? 'crosshair' : '';
+      Cartesian2.clone(e.endPosition, pos);
+      clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        canvas.style.cursor = idOf(viewer.scene.pick(pos)) ? 'crosshair' : '';
+      }, 140);
     }, ScreenSpaceEventType.MOUSE_MOVE);
   }
 }

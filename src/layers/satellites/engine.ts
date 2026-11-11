@@ -28,6 +28,7 @@ import { registerFinder, registerPicker } from '../manager';
 import type { Dossier } from '../Layer';
 import { categorize, SAT_CATS, CAT_INDEX, type SatCat } from './categories';
 import { pid } from '../Layer';
+import { parseCsv } from './omm';
 
 export interface SatMeta {
   name: string;
@@ -43,22 +44,8 @@ const CELESTRAK = 'https://celestrak.org/NORAD/elements/gp.php';
 const TTL = 2 * 3600_000; // CelesTrak asks for ≤ 1 fetch / 2h per group
 const DEBRIS_GROUPS = ['cosmos-1408-debris', 'fengyun-1c-debris', 'iridium-33-debris', 'cosmos-2251-debris'];
 
-function parseCsv(text: string): OMMJsonObject[] {
-  const lines = text.trim().split(/\r?\n/);
-  const head = lines.shift()!.split(',');
-  const out: any[] = [];
-  for (const line of lines) {
-    const cols = line.split(',');
-    if (cols.length !== head.length) continue;
-    const o: any = {};
-    head.forEach((h, i) => {
-      const v = cols[i];
-      o[h] = h === 'OBJECT_NAME' || h === 'OBJECT_ID' || h === 'EPOCH' || h === 'CLASSIFICATION_TYPE' ? v : Number(v);
-    });
-    out.push(o);
-  }
-  return out;
-}
+// one shared distance scaler for every point (was one object per satellite)
+const SCALE = new NearFarScalar(1e6, 2.2, 4e7, 0.8);
 
 type Listener = (cat: SatCat, count: number) => void;
 
@@ -80,6 +67,10 @@ class SatEngine {
   private tickId = 0;
   private pos: Float32Array | null = null;
   private visible = new Set<SatCat>();
+  /** per-satellite visibility (1 = propagate & draw); mirrored to the worker so hidden categories cost nothing */
+  private mask = new Uint8Array(0);
+  /** raw CSV texts sent to the worker (a string clones far cheaper than 17k objects) */
+  private csvParts: string[] = [];
   private loading: Promise<void> | null = null;
   private debrisLoaded = false;
   private selIdx = -1;
@@ -101,7 +92,7 @@ class SatEngine {
     if (this.loading) return this.loading;
     this.viewer = viewer;
     this.loading = (async () => {
-      this.points = viewer.scene.primitives.add(new PointPrimitiveCollection({ blendOption: BlendOption.OPAQUE_AND_TRANSLUCENT }));
+      this.points = viewer.scene.primitives.add(new PointPrimitiveCollection({ blendOption: BlendOption.OPAQUE }));
       this.labels = viewer.scene.primitives.add(new LabelCollection());
       this.lines = viewer.scene.primitives.add(new PolylineCollection());
       this.worker = new Worker(new URL('./sat.worker.ts', import.meta.url), { type: 'module' });
@@ -130,7 +121,9 @@ class SatEngine {
       const newest = this.meta.reduce((m, x) => Math.max(m, Date.parse((x.omm as any).EPOCH + 'Z') || 0), 0);
       log('CELESTRAK', `${this.meta.length.toLocaleString()} orbital elements ${active.fromCache ? 'restored from cache' : 'downlinked'} · newest epoch ${ago(newest)}`, 'ok');
       this.buildPrims(0);
-      this.worker.postMessage({ type: 'load', omms: this.meta.map((m) => m.omm) });
+      this.csvParts = [active.data];
+      this.worker.postMessage({ type: 'load', csv: this.csvParts });
+      this.syncMask();
       this.statusAll(active.fromCache ? 'cached' : 'live');
     })().catch((e) => {
       this.loading = null;
@@ -156,7 +149,7 @@ class SatEngine {
         pixelSize: big ? 5 : 2.5,
         color: this.colors[CAT_INDEX[m.cat]],
         outlineWidth: 0,
-        scaleByDistance: new NearFarScalar(1e6, 2.2, 4e7, 0.8),
+        scaleByDistance: SCALE,
         show: false,
         id: pid('sat', String(i)),
       });
@@ -198,17 +191,27 @@ class SatEngine {
     for (const r of res) {
       if (!r) continue;
       for (const o of parseCsv(r.data) as any[]) this.meta.push({ name: o.OBJECT_NAME, norad: o.NORAD_CAT_ID, intl: o.OBJECT_ID, omm: o, cat: 'debris' });
+      this.csvParts.push(r.data);
     }
     this.buildPrims(from);
-    this.worker.postMessage({ type: 'load', omms: this.meta.map((m) => m.omm) });
+    this.worker.postMessage({ type: 'load', csv: this.csvParts });
+    this.syncMask();
     this.pos = null;
     this.statusAll('live');
     log('CELESTRAK', `${(this.meta.length - from).toLocaleString()} debris fragments tracked`, 'warn');
   }
 
+  private syncMask() {
+    const m = new Uint8Array(this.meta.length);
+    for (let i = 0; i < m.length; i++) m[i] = this.visible.has(this.meta[i].cat) ? 1 : 0;
+    this.mask = m;
+    this.worker?.postMessage({ type: 'vis', mask: m.slice() });
+  }
+
   private applyVisibility() {
+    this.syncMask();
     for (let i = 0; i < this.meta.length; i++) {
-      const vis = this.visible.has(this.meta[i].cat);
+      const vis = this.mask[i] === 1;
       const p = this.prims[i];
       if (!p) continue;
       p.show = vis && !!this.pos && i * 3 < this.pos.length && !Number.isNaN(this.pos[i * 3]);
@@ -242,7 +245,7 @@ class SatEngine {
       for (let i = 0; i < n; i++) {
         const p = this.prims[i];
         const x = buf[i * 3];
-        const vis = this.visible.has(this.meta[i].cat) && !Number.isNaN(x);
+        const vis = this.mask[i] === 1 && !Number.isNaN(x);
         if (vis) {
           scratch.x = x;
           scratch.y = buf[i * 3 + 1];

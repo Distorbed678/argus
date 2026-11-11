@@ -6,6 +6,7 @@ import { icon, fmtLL, esc } from '../../core/fmt';
 import { pid, type LayerFactory } from '../Layer';
 
 const MAX_ALT = 600_000;
+const SCALE = new NearFarScalar(1e3, 1.3, 1e6, 0.5);
 
 const KINDS: Record<string, { q: string; color: string; icon: Parameters<typeof icon>[0] }> = {
   military: { q: 'nwr["military"]({{bbox}});nwr["landuse"="military"]({{bbox}});', color: '#ff3b5c', icon: 'diamond' },
@@ -54,7 +55,7 @@ export function overpassLayer(kind: string): LayerFactory {
             const key = `${e.type}/${e.id}`;
             if (bbs.has(key)) continue;
             els.set(key, { ...e, lat, lon });
-            bbs.set(key, coll.add({ position: Cartesian3.fromDegrees(lon, lat), image: icon(K.icon, K.color, 32), width: 18, height: 18, scaleByDistance: new NearFarScalar(1e3, 1.3, 1e6, 0.5), id: pid(ctx.id, key) }));
+            bbs.set(key, coll.add({ position: Cartesian3.fromDegrees(lon, lat), image: icon(K.icon, K.color, 32), width: 18, height: 18, scaleByDistance: SCALE, id: pid(ctx.id, key) }));
           }
           ctx.status('live', `OSM ${new URL(ep).hostname} · view scan`, els.size);
           ctx.requestRender();

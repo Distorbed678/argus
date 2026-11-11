@@ -1,5 +1,5 @@
 // Submarine cables + landing points from the bundled TeleGeography snapshot (public/data/cables.json).
-import { PolylineCollection, PointPrimitiveCollection, Cartesian3, Color, Material, NearFarScalar } from 'cesium';
+import { PolylineCollection, PointPrimitiveCollection, BlendOption, Cartesian3, Color, Material, NearFarScalar } from 'cesium';
 import { getData, describeError } from '../../data/fetcher';
 import { fmtLL } from '../../core/fmt';
 import { pid, type LayerFactory } from '../Layer';
@@ -25,7 +25,7 @@ const factory: LayerFactory = (ctx) => {
         return;
       }
       lines = ctx.viewer.scene.primitives.add(new PolylineCollection());
-      pts = ctx.viewer.scene.primitives.add(new PointPrimitiveCollection());
+      pts = ctx.viewer.scene.primitives.add(new PointPrimitiveCollection({ blendOption: BlendOption.OPAQUE }));
       for (const c of snap!.cables) {
         const col = Color.fromCssColorString(c.color || '#4fc3ff').withAlpha(0.75);
         const mat = Material.fromType('Color', { color: col });
@@ -34,8 +34,10 @@ const factory: LayerFactory = (ctx) => {
           lines!.add({ positions: Cartesian3.fromDegreesArray(l), width: 1.5, material: mat, id: pid(ctx.id, `c:${c.id}`) });
         }
       }
+      const lpColor = Color.fromCssColorString('#e0f4ff');
+      const lpScale = new NearFarScalar(1e5, 1.5, 2e7, 0.6);
       for (const p of snap!.landings) {
-        pts!.add({ position: Cartesian3.fromDegrees(p.lon, p.lat), pixelSize: 4, color: Color.fromCssColorString('#e0f4ff'), scaleByDistance: new NearFarScalar(1e5, 1.5, 2e7, 0.6), id: pid(ctx.id, `l:${p.id}`) });
+        pts!.add({ position: Cartesian3.fromDegrees(p.lon, p.lat), pixelSize: 4, color: lpColor, scaleByDistance: lpScale, id: pid(ctx.id, `l:${p.id}`) });
       }
       ctx.status('cached', `snapshot ${snap!.generated.slice(0, 10)}`, snap!.cables.length);
       ctx.requestRender();

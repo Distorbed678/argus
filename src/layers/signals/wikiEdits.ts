@@ -15,6 +15,7 @@ interface Edit {
 }
 
 const TTL = 10 * 60_000;
+const SCALE = new NearFarScalar(1e5, 1.2, 2e7, 0.6);
 
 const factory: LayerFactory = (ctx) => {
   let es: EventSource | undefined;
@@ -44,7 +45,7 @@ const factory: LayerFactory = (ctx) => {
         edits.set(key, ed);
         let b = bbs.get(key);
         if (!b) {
-          b = coll.add({ position: Cartesian3.fromDegrees(c.lon, c.lat), image: icon('pin', '#e0f4ff', 32), width: 14, height: 14, scaleByDistance: new NearFarScalar(1e5, 1.2, 2e7, 0.6), id: pid(ctx.id, key) });
+          b = coll.add({ position: Cartesian3.fromDegrees(c.lon, c.lat), image: icon('pin', '#e0f4ff', 32), width: 14, height: 14, scaleByDistance: SCALE, id: pid(ctx.id, key) });
           bbs.set(key, b);
         }
         total++;

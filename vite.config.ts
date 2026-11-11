@@ -48,11 +48,25 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}', 'data/*.json'],
-        globIgnores: ['cesium/**'],
+        // precache only the app shell; big optional pieces (hls.js, camera/cable snapshots, the
+        // satellite fallback catalog) are cached at runtime the first time a layer actually uses them
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+        globIgnores: ['cesium/**', 'data/**', 'assets/hls-*.js'],
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
         navigateFallbackDenylist: [/^\/__proxy/],
         runtimeCaching: [
+          {
+            // hashed lazy chunks are immutable
+            urlPattern: ({ url }) => url.pathname.includes('/assets/'),
+            handler: 'CacheFirst',
+            options: { cacheName: 'app-chunks', expiration: { maxEntries: 120 } },
+          },
+          {
+            // bundled snapshots refresh daily via CI: serve cached, update in the background
+            urlPattern: ({ url }) => url.pathname.includes('/data/'),
+            handler: 'StaleWhileRevalidate',
+            options: { cacheName: 'snapshots', expiration: { maxEntries: 20 } },
+          },
           {
             urlPattern: ({ url }) => url.pathname.includes('/cesium/'),
             handler: 'CacheFirst',
@@ -60,7 +74,8 @@ export default defineConfig({
           },
           {
             urlPattern: ({ url }) =>
-              /arcgisonline\.com|cartocdn\.com|gibs\.earthdata\.nasa\.gov|tile\.openstreetmap\.org|tilecache\.rainviewer\.com/.test(url.hostname),
+              /arcgisonline\.com|gibs\.earthdata\.nasa\.gov|tile\.openstreetmap\.org|tilecache\.rainviewer\.com/.test(url.hostname) &&
+              !url.pathname.includes('/default/default/'),
             handler: 'CacheFirst',
             options: {
               cacheName: 'map-tiles',

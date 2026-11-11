@@ -42,9 +42,13 @@ export function esc(s: unknown): string {
   return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 }
 
-/** Tiny glyph icons drawn to canvas once and shared by billboard collections. */
-const iconCache = new Map<string, HTMLCanvasElement>();
-export function icon(kind: 'plane' | 'ship' | 'train' | 'cam' | 'diamond' | 'ring' | 'tri' | 'radio' | 'pin' | 'cross', color: string, size = 24): HTMLCanvasElement {
+/**
+ * Tiny glyph icons drawn to canvas once and returned as a cached data URL.
+ * A string image lets Cesium dedupe atlas entries by id: passing the canvas object would give
+ * every billboard its own GUID + atlas slot (8k planes = 8k uploads and repacks).
+ */
+const iconCache = new Map<string, string>();
+export function icon(kind: 'plane' | 'ship' | 'train' | 'cam' | 'diamond' | 'ring' | 'tri' | 'radio' | 'pin' | 'cross', color: string, size = 24): string {
   const k = `${kind}|${color}|${size}`;
   const hit = iconCache.get(k);
   if (hit) return hit;
@@ -162,8 +166,9 @@ export function icon(kind: 'plane' | 'ship' | 'train' | 'cam' | 'diamond' | 'rin
       g.stroke();
       break;
   }
-  iconCache.set(k, c);
-  return c;
+  const url = c.toDataURL('image/png');
+  iconCache.set(k, url);
+  return url;
 }
 
 export function ecefFromDeg(lon: number, lat: number, h = 0) {

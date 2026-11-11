@@ -174,7 +174,7 @@ export function acRenderer(ctx: Parameters<LayerFactory>[0]) {
           b = coll.add({ position: Cartesian3.ZERO, image: icon('plane', col, 32), width: 18, height: 18, alignedAxis: Cartesian3.UNIT_Z, scaleByDistance: scale, id: pid(ctx.id, a.hex) });
           bbs.set(a.hex, b);
           if (!prev) onNew?.(a);
-        } else if (prev && altColor(prev) !== col) b.image = icon('plane', col, 32) as any;
+        } else if (prev && altColor(prev) !== col) b.image = icon('plane', col, 32);
         b.rotation = -((a.track ?? 0) * Math.PI) / 180;
         place(a, b, t);
       }
@@ -195,6 +195,7 @@ const factory: LayerFactory = (ctx) => {
   const r = acRenderer(ctx);
   let poller: Poller | undefined;
   let mode: 'regional' | 'global' | null = null;
+  let globalAt = 0; // timestamp of the OpenSky snapshot currently on screen
   const alerted = new Set<string>();
 
   const checkEmerg = (a: Ac) => {
@@ -232,13 +233,18 @@ const factory: LayerFactory = (ctx) => {
     const want = c.alt > 2.5e6 ? 'global' : 'regional';
     if (want !== mode) {
       mode = want;
+      globalAt = 0;
       r.update([], true);
     }
     try {
       if (mode === 'global') {
         const res = await getData<any>('https://opensky-network.org/api/states/all', { via: 'proxy', ttl: 110_000, timeout: 30000 });
-        const list = ((res.data.states ?? []) as any[]).map((s) => fromOpenSky(s, 'OpenSky')).filter(Boolean) as Ac[];
-        r.update(list, true, checkEmerg);
+        // polls every 10 s but the snapshot only changes every ~110 s: don't rebuild 8k billboards for nothing
+        if (res.at !== globalAt) {
+          globalAt = res.at;
+          const list = ((res.data.states ?? []) as any[]).map((s) => fromOpenSky(s, 'OpenSky')).filter(Boolean) as Ac[];
+          r.update(list, true, checkEmerg);
+        }
         ctx.status(res.stale ? 'cached' : 'live', `GLOBAL · OpenSky snapshot ${ago(res.at)}`, r.acs.size);
       } else {
         const vc = viewCenter();

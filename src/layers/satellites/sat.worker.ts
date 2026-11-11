@@ -2,11 +2,15 @@
 // SGP4 propagation for the whole catalog, off the main thread.
 import { json2satrec, propagate, gstime, eciToEcf, ecfToLookAngles, eciToGeodetic, type SatRec, type OMMJsonObject } from 'satellite.js';
 
+import { parseCsv } from './omm';
+
 let recs: (SatRec | null)[] = [];
+let mask: Uint8Array | null = null;
 const DEG = Math.PI / 180;
 
 type Msg =
-  | { type: 'load'; omms: OMMJsonObject[] }
+  | { type: 'load'; csv: string[] }
+  | { type: 'vis'; mask: Uint8Array }
   | { type: 'tick'; t: number; id: number }
   | { type: 'passes'; idx: number; lat: number; lon: number; h: number; t: number; hours: number; reqId: number }
   | { type: 'overhead'; lat: number; lon: number; h: number; t: number; minEl: number; reqId: number };
@@ -20,7 +24,8 @@ function ecefAt(rec: SatRec, date: Date, gmst: number) {
 self.onmessage = (ev: MessageEvent<Msg>) => {
   const m = ev.data;
   if (m.type === 'load') {
-    recs = m.omms.map((o) => {
+    const omms: OMMJsonObject[] = m.csv.flatMap((c) => parseCsv(c));
+    recs = omms.map((o) => {
       try {
         const r = json2satrec(o);
         return r && !r.error ? r : null;
@@ -29,6 +34,8 @@ self.onmessage = (ev: MessageEvent<Msg>) => {
       }
     });
     (self as any).postMessage({ type: 'loaded', n: recs.length, ok: recs.filter(Boolean).length });
+  } else if (m.type === 'vis') {
+    mask = m.mask;
   } else if (m.type === 'tick') {
     const n = recs.length;
     const buf = new Float32Array(n * 3);
@@ -36,7 +43,8 @@ self.onmessage = (ev: MessageEvent<Msg>) => {
     const gmst = gstime(date);
     for (let i = 0; i < n; i++) {
       const r = recs[i];
-      const p = r ? ecefAt(r, date, gmst) : null;
+      // hidden categories are skipped entirely (NaN = not drawn)
+      const p = r && (!mask || mask[i]) ? ecefAt(r, date, gmst) : null;
       if (!p || !Number.isFinite(p.ecf.x)) {
         buf[i * 3] = NaN;
         continue;
