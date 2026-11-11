@@ -526,3 +526,6 @@ body.tool-active #crosshair { opacity: 0.9; }
 .board-log li.aoi { border-left-color: var(--amber); background: rgba(255, 179, 71, 0.08); }
 .board-log li.aoi .s::before { content: '◇ '; color: var(--amber); }
 @media (max-width: 860px) { .board-log li { padding: 8px 4px; } }
+
+/* the sensor-mode panel shares the right column with INTEL on desktop */
+@media (min-width: 861px) { body.intel-open #modes { display: none !important; } }

@@ -64,6 +64,7 @@ export function openIntel(tab?: string) {
       (document.querySelector('#mobilebar [data-sheet="intel"]') as HTMLButtonElement | null)?.click();
   } else {
     root.hidden = false;
+    document.body.classList.add('intel-open');
     document.getElementById('btn-intel')?.classList.add('on');
   }
   show(tab ?? current);
@@ -73,6 +74,7 @@ export function toggleIntel(tab?: string) {
   if (!small() && !root.hidden && (!tab || tab === current)) {
     root.hidden = true;
     clearInterval(timer);
+    document.body.classList.remove('intel-open');
     document.getElementById('btn-intel')?.classList.remove('on');
     return;
   }
