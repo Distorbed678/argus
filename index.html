@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#020812" />
+    <meta name="description" content="ARGUS — real-data orbital surveillance console: satellites, flights, ships, weather, hazards, cameras and more on a 3D globe." />
+    <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+    <title>ARGUS</title>
+  </head>
+  <body>
+    <div id="globe"></div>
+    <div id="fx-overlay" aria-hidden="true"><div class="scanlines"></div><div class="vignette"></div><div class="noise"></div></div>
+    <div id="frame" aria-hidden="true"><i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i></div>
+    <div id="crosshair" aria-hidden="true"></div>
+    <div id="reticle" hidden><div class="ring"></div><div class="ticks"></div><span class="tag"></span></div>
+
+    <header id="topbar">
+      <div class="brand glitch" data-text="ARGUS"><span class="eye"></span>ARGUS</div>
+      <div class="sub-brand">ORBITAL SURVEILLANCE CONSOLE</div>
+      <div class="readouts">
+        <div class="ro"><span>UTC</span><b id="ro-utc">--:--:--</b></div>
+        <div class="ro" id="ro-sim-wrap"><span>SIM</span><b id="ro-sim">LIVE</b></div>
+        <div class="ro hide-sm"><span>CAM</span><b id="ro-cam">—</b></div>
+        <div class="ro hide-sm"><span>ALT</span><b id="ro-alt">—</b></div>
+        <div class="ro hide-sm"><span>TRACKS</span><b id="ro-tracks">0</b></div>
+        <div class="ro hide-sm"><span>FPS</span><b id="ro-fps">—</b></div>
+      </div>
+      <div class="top-actions">
+        <button class="icon-btn" id="btn-cmd" title="Command line (/)">⌘</button>
+        <button class="icon-btn" id="btn-locate" title="Locate me">◎</button>
+        <button class="icon-btn" id="btn-ar" title="AR sky view">AR</button>
+        <button class="icon-btn" id="btn-settings" title="Settings">⚙</button>
+      </div>
+    </header>
+
+    <aside id="layers" class="panel">
+      <div class="panel-head"><span class="hud-title">FEEDS // LAYERS</span><button class="x" data-close="layers">×</button></div>
+      <input id="layer-filter" class="filter" placeholder="filter layers…" autocomplete="off" />
+      <div id="layer-list"></div>
+    </aside>
+
+    <aside id="dossier" class="panel" hidden></aside>
+
+    <section id="log" class="panel">
+      <div class="panel-head"><span class="hud-title">INTERCEPT LOG</span><span class="blink">●</span><button class="x" data-close="log">×</button></div>
+      <ol id="log-list"></ol>
+    </section>
+
+    <div id="hud-wx" class="mini panel" hidden></div>
+
+    <section id="modes" class="panel">
+      <div class="panel-head"><span class="hud-title">SENSOR MODE</span><button class="x" data-close="modes">×</button></div>
+      <div id="mode-list"></div>
+    </section>
+
+    <footer id="timeline" class="panel">
+      <button class="btn live" id="tl-live">● LIVE</button>
+      <div class="tl-rates" id="tl-rates"></div>
+      <div class="tl-track"><input type="range" id="tl-slider" min="-1440" max="1440" step="1" value="0" aria-label="Time offset" /><div class="tl-marks"><span>-24H</span><span>NOW</span><span>+24H</span></div></div>
+      <div class="tl-time" id="tl-time">—</div>
+    </footer>
+
+    <nav id="mobilebar">
+      <button data-sheet="layers">LAYERS</button>
+      <button data-sheet="log">LOG</button>
+      <button data-sheet="modes">MODE</button>
+      <button data-sheet="timeline">TIME</button>
+      <button id="mb-cmd">CMD</button>
+    </nav>
+
+    <div id="cmd" hidden>
+      <div class="cmd-box">
+        <div class="cmd-line"><span class="prompt">argus@uplink:~$</span><input id="cmd-input" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="type 'help'" /></div>
+        <div id="cmd-out"></div>
+      </div>
+    </div>
+
+    <div id="feeds"></div>
+    <div id="settings" hidden></div>
+    <div id="ar" hidden></div>
+    <div id="boot"></div>
+    <div id="credits"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
