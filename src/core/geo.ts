@@ -201,3 +201,22 @@ export function densify(pts: LatLon[], stepKm = 50): LatLon[] {
   }
   return out;
 }
+
+export interface MeasureResult {
+  segments: { km: number; brg: number }[];
+  totalKm: number;
+  areaKm2: number | null;
+}
+
+/** Pure: everything the readout shows for a list of points. */
+export function measure(pts: LatLon[], closed: boolean): MeasureResult {
+  const segments = [];
+  for (let i = 1; i < pts.length; i++) segments.push({ km: distKm(pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1]), brg: bearingDeg(pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1]) });
+  if (closed && pts.length >= 3) {
+    const a = pts[pts.length - 1];
+    const b = pts[0];
+    segments.push({ km: distKm(a[0], a[1], b[0], b[1]), brg: bearingDeg(a[0], a[1], b[0], b[1]) });
+  }
+  return { segments, totalKm: pathKm(closed && pts.length >= 3 ? [...pts, pts[0]] : pts), areaKm2: closed && pts.length >= 3 ? polygonAreaKm2(pts) : null };
+}
+

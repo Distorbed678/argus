@@ -24,11 +24,12 @@ const R = {
 export function categorize(name: string, militaryIds: Set<number>, norad: number): SatCat {
   const n = name.toUpperCase();
   if (R.stations.test(n)) return 'stations';
+  // fragments and rocket bodies first, so "FENGYUN 1C DEB" isn't filed as a weather satellite
+  if (/\bDEB\b|R\/B|DEBRIS/.test(n)) return 'debris';
   if (R.starlink.test(n)) return 'starlink';
   if (militaryIds.has(norad) || R.military.test(n)) return 'military';
   if (R.gnss.test(n)) return 'gnss';
   if (R.comms.test(n)) return 'comms';
   if (R.earthobs.test(n)) return 'earthobs';
-  if (/\bDEB\b|R\/B|DEBRIS/.test(n)) return 'debris';
   return 'other';
 }
